@@ -71,6 +71,7 @@ export const ensureHotesseSchema = async (db) => {
       id TEXT PRIMARY KEY,
       notif_contacts_json TEXT NOT NULL DEFAULT '[]',
       custom_logo TEXT,
+      sender_email TEXT DEFAULT 'notifications@l-iamani.com',
       updated_at TEXT NOT NULL
     );
   `).run();
@@ -78,6 +79,13 @@ export const ensureHotesseSchema = async (db) => {
   // Ajout rétrocompatible de la colonne custom_logo si la table existe déjà
   try {
     await db.prepare('ALTER TABLE hotesse_settings ADD COLUMN custom_logo TEXT').run();
+  } catch (_) {
+    // Ignore l'erreur si la colonne existe déjà
+  }
+
+  // Ajout rétrocompatible de la colonne sender_email si la table existe déjà
+  try {
+    await db.prepare("ALTER TABLE hotesse_settings ADD COLUMN sender_email TEXT DEFAULT 'notifications@l-iamani.com'").run();
   } catch (_) {
     // Ignore l'erreur si la colonne existe déjà
   }

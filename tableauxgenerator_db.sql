@@ -46,6 +46,7 @@ CREATE TABLE hotesse_settings (
       id TEXT PRIMARY KEY,
       notif_contacts_json TEXT NOT NULL DEFAULT '[]',
       custom_logo TEXT,
+      sender_email TEXT DEFAULT 'notifications@l-iamani.com',
       updated_at TEXT NOT NULL
     );
 DELETE FROM sqlite_sequence;

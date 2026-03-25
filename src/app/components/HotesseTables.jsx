@@ -644,7 +644,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     }
   };
 
-  const handleSendNotifications = () => {
+  const handleSendNotifications = async () => {
     if (!selectedCalendar) {
       setIsNotifModalOpen(false);
       return;
@@ -656,7 +656,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
 
     notifContacts
       .filter((c) => selectedNotifIds.includes(c.id))
-      .forEach((contact) => {
+      .forEach(async (contact) => {
         const channel = notifChannelById[contact.id] || 'auto';
         if (channel === 'auto' || channel === 'whatsapp') {
           if (contact.phone) {
@@ -669,9 +669,19 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         if (channel === 'auto' || channel === 'email') {
           if (contact.email) {
             const subject = `Calendrier mis à jour - ${title}`;
-            const mailto = `mailto:${encodeURIComponent(contact.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
-            if (typeof window !== 'undefined') {
-              window.open(mailto, '_blank');
+            const htmlMessage = `<p>Le calendrier "${title}" vient d'être mis à jour.</p><p><a href="${calendarUrl}">Consulter le calendrier</a></p>`;
+            try {
+              await fetch('/api/hotesse/send-notification', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  email: contact.email,
+                  subject: subject,
+                  message: htmlMessage,
+                }),
+              });
+            } catch (error) {
+              console.error(`Failed to send email to ${contact.email}:`, error);
             }
           }
         }

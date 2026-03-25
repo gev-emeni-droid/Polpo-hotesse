@@ -4,12 +4,13 @@ export const onRequestGet = async ({ env }) => {
   try {
     await ensureHotesseSchema(env.DB);
     const row = await env.DB.prepare(
-      'SELECT notif_contacts_json, custom_logo, updated_at FROM hotesse_settings WHERE id = ?'
+      'SELECT notif_contacts_json, custom_logo, sender_email, updated_at FROM hotesse_settings WHERE id = ?'
     ).bind('global').first();
     const notif_contacts = row ? JSON.parse(row.notif_contacts_json || '[]') : [];
     const custom_logo = row?.custom_logo || null;
+    const sender_email = row?.sender_email || 'notifications@l-iamani.com';
     return new Response(
-      JSON.stringify({ ok: true, settings: { notif_contacts, custom_logo, updated_at: row?.updated_at || null } }),
+      JSON.stringify({ ok: true, settings: { notif_contacts, custom_logo, sender_email, updated_at: row?.updated_at || null } }),
       {
         headers: {
           'content-type': 'application/json',
@@ -32,15 +33,17 @@ export const onRequestPut = async ({ env, request }) => {
     const body = await request.json().catch(() => ({}));
     const notif_contacts = Array.isArray(body.notif_contacts) ? body.notif_contacts : [];
     const custom_logo = body.custom_logo || null;
+    const sender_email = body.sender_email || 'notifications@l-iamani.com';
     const now = new Date().toISOString();
     await env.DB.prepare(
-      `INSERT INTO hotesse_settings (id, notif_contacts_json, custom_logo, updated_at)
-       VALUES (?, ?, ?, ?)
+      `INSERT INTO hotesse_settings (id, notif_contacts_json, custom_logo, sender_email, updated_at)
+       VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          notif_contacts_json = excluded.notif_contacts_json,
          custom_logo = excluded.custom_logo,
+         sender_email = excluded.sender_email,
          updated_at = excluded.updated_at`
-    ).bind('global', JSON.stringify(notif_contacts), custom_logo, now).run();
+    ).bind('global', JSON.stringify(notif_contacts), custom_logo, sender_email, now).run();
     return new Response(
       JSON.stringify({ ok: true }),
       {
