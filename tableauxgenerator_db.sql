@@ -19,14 +19,6 @@ INSERT INTO "rows" VALUES('728ac3b4-4b02-414a-be2c-d319beec5810','611820d0-5013-
 INSERT INTO "rows" VALUES('97360288-5f1a-4545-a6ca-da11acce7acc','611820d0-5013-41a8-8b06-0cbe98f968d9','{"id":"res_1763830102558_0.3467707578540973","nom":"BEN SIRAC","prenom":" NIAMIEN","tel":"+33 6 42 69 48 97","heure":"22:00","creation":"2025-11-22","paiement":"2025-11-22","comment":"","ad":2,"enf":0,"tarifad":98,"tarifenf":49,"prisepar":"Zenchef","encaisserpar":"Zenchef","cb":0,"amex":0,"espece":0,"cheque":0,"zen":196,"virm":0}','2025-11-23T10:44:42.468Z','2025-11-23T10:44:42.468Z');
 INSERT INTO "rows" VALUES('1738e915-b9f4-4152-a6ff-ada895b2401a','611820d0-5013-41a8-8b06-0cbe98f968d9','{"id":"res_1763894759114_0.20567830161031841","nom":" PEAUCELLE","prenom":"Laurent","tel":"+33 6 07 91 44 76","heure":"21:30","creation":"2025-11-23","paiement":"2025-11-23","comment":"","ad":4,"enf":0,"tarifad":98,"tarifenf":49,"prisepar":"Zenchef","encaisserpar":"Zenchef","cb":0,"amex":0,"espece":0,"cheque":0,"zen":392,"virm":0}','2025-11-23T11:49:42.743Z','2025-11-23T11:49:42.743Z');
 INSERT INTO "rows" VALUES('0fe8e89a-c0f1-4df7-b289-20451ff48303','611820d0-5013-41a8-8b06-0cbe98f968d9','{"nom":" PEAUCELLE","prenom":"Laurent","tel":"+33 6 07 91 44 76","heure":"21:30","creation":"2025-11-23","paiement":"2025-11-23","comment":"","ad":5,"enf":0,"tarifad":98,"tarifenf":49,"prisepar":"Zenchef","encaisserpar":"Zenchef","cb":0,"amex":0,"espece":0,"cheque":0,"zen":392,"virm":0}','2025-11-23T13:27:14.978Z','2025-11-23T13:27:14.978Z');
-CREATE TABLE settings (
-        table_id TEXT PRIMARY KEY,
-        prise_par_json TEXT NOT NULL DEFAULT '[]',
-        encaisser_par_json TEXT NOT NULL DEFAULT '[]',
-        updated_at TEXT NOT NULL
-      );
-INSERT INTO "settings" VALUES('30dd92dd-d795-4979-ad82-6b40f1039b1f','["Emeni","Zenchef","François","Philippe","Shelihane","Matthieu","Lucas","Régis","Juliette","Maëlle","Autre"]','["Emeni","Zenchef","François","Philippe","Shelihane","Matthieu","Lucas","Régis","Juliette","Maëlle","Autre"]','2025-11-14T12:49:12.395Z');
-INSERT INTO "settings" VALUES('611820d0-5013-41a8-8b06-0cbe98f968d9','["Emeni","Zenchef","François","Philippe","Shelihane","Matthieu","Lucas","Régis","Juliette","Maëlle","Autre"]','["Emeni","Zenchef","François","Philippe","Shelihane","Matthieu","Lucas","Régis","Juliette","Maëlle","Autre"]','2025-11-14T20:13:13.736Z');
 CREATE TABLE hotesse_calendars (
       id TEXT PRIMARY KEY,
       month INTEGER NOT NULL,
