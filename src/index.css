@@ -346,68 +346,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   }
 }
 
-/* Impression du calendrier - une seule page */
-@media print {
-  @page {
-    size: A4 landscape;
-    margin: 10mm;
-  }
-
-  #print-calendar-panel {
-    page-break-after: avoid;
-    page-break-inside: avoid;
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    display: block !important;
-  }
-
-  #print-calendar-panel > * {
-    page-break-inside: avoid;
-  }
-
-  #print-calendar-panel .grid {
-    page-break-inside: avoid;
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0 !important;
-    width: 100%;
-    height: 100vh;
-  }
-
-  #print-calendar-panel > div:first-child {
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-  }
-
-  #print-calendar-panel > div > div > div {
-    border: 1px solid #999 !important;
-    padding: 4px !important;
-    margin: 0 !important;
-    min-height: auto !important;
-    height: auto !important;
-    font-size: 8px !important;
-    overflow: hidden;
-  }
-
-  #print-calendar-panel .print-priv {
-    margin: 2px 0 !important;
-    padding: 2px !important;
-    font-size: 7px !important;
-    line-height: 1.1 !important;
-  }
-
-  body {
-    margin: 0;
-    padding: 0;
-  }
-
-  body::before,
-  body::after {
-    display: none !important;
-  }
-}
-
 /* Styles V4 pour la vue Tableau */
 .panel {
   background: var(--card);

@@ -1982,22 +1982,22 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                 className="hidden print:block print:w-full print:p-0 print:m-0"
               >
                 {/* En-tête imprimé */}
-                <div className="print:mb-2 print:pb-2 print:border-b-2 print:border-black print:text-center">
+                <div className="print:mb-4 print:pb-4 print:border-b-2 print:border-black print:text-center">
                   <div className="print:text-xs print:tracking-wide print:uppercase print:text-gray-700">
                     PRIVATISATION DU MOIS DE
                   </div>
-                  <div className="print:text-xl print:font-bold print:text-[#163667] print:m-0 print:tracking-tight">
+                  <div className="print:text-2xl print:font-bold print:text-[#163667] print:m-0 print:tracking-tight">
                     {`${MONTHS[selectedCalendar.month]} ${selectedCalendar.year}`}
                   </div>
                 </div>
 
                 {/* Grille du calendrier pour impression */}
-                <div className="grid grid-cols-7 gap-0 text-xs print:gap-0">
+                <div className="grid grid-cols-7 gap-0.5 text-xs print:gap-0.5">
                   {/* En-têtes des jours */}
                   {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((d) => (
                     <div
                       key={d}
-                      className="font-bold text-center bg-[#163667] text-white p-2 print:bg-[#163667] print:text-white print:p-1 print:text-[7px]"
+                      className="font-bold text-center bg-[#163667] text-white p-2 print:bg-[#163667] print:text-white print:p-1.5 print:text-[8px]"
                     >
                       {d}
                     </div>
@@ -2010,7 +2010,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                         return (
                           <div
                             key={`${wi}-${di}`}
-                            className="bg-gray-100 border-l border-b border-gray-300 p-1 print:bg-gray-50 print:border print:border-gray-300 print:p-0.5"
+                            className="bg-gray-100 border-l border-b border-gray-300 p-1 print:bg-gray-50 print:border print:border-gray-300 print:p-0.5 print:min-h-[60px]"
                           />
                         );
                       }
@@ -2026,12 +2026,12 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                       return (
                         <div
                           key={`${wi}-${di}`}
-                          className="border-l border-b border-gray-300 p-1 print:border print:border-gray-300 print:p-0.5 print:text-[7px] bg-white print:bg-white overflow-hidden"
+                          className="border-l border-b border-gray-300 p-1 print:border print:border-gray-300 print:p-1 print:text-[14px] print:min-h-[60px] bg-white print:bg-white overflow-hidden"
                         >
-                          <div className="font-bold text-gray-700 print:text-gray-800 print:mb-0.5 print:text-[8px]">
+                          <div className="font-bold text-gray-700 print:text-gray-800 print:mb-1 print:text-[12px]">
                             {day.getDate()}
                           </div>
-                          <div className="space-y-0 print:space-y-0">
+                          <div className="space-y-0.5 print:space-y-0.5">
                             {dayPrivs.map((priv) => {
                               const hostesses = Array.isArray(priv.hostesses)
                                 ? priv.hostesses
@@ -2052,7 +2052,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                               return (
                                 <div
                                   key={priv.id}
-                                  className={`text-[9px] print:text-[6px] bg-blue-50 print:text-blue-900 ${bgColor} ${textColor} p-0.5 print:p-0.5 rounded-sm print:rounded-sm border-l-2 print:border-l-2 border-blue-400 ${borderColor} print:leading-tight print-priv`}
+                                  className={`text-[9px] print:text-[8px] bg-blue-50 print:text-blue-900 ${bgColor} ${textColor} p-0.5 print:p-1 rounded-sm print:rounded-sm border-l-2 print:border-l-2 border-blue-400 ${borderColor} print:leading-tight print-priv`}
                                 >
                                   <div className="font-semibold">
                                     {priv.name}{' '}
@@ -2063,27 +2063,27 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                                     )}
                                   </div>
                                   {priv.start && priv.end && (
-                                    <div className="print:text-[6px]">
+                                    <div className="print:text-[8px]">
                                       {priv.start}-{priv.end}
                                     </div>
                                   )}
                                   {priv.people && (
-                                    <div className="print:text-[6px]">
-                                      {priv.people}p
+                                    <div className="print:text-[8px]">
+                                      {priv.people} pers
                                     </div>
                                   )}
                                   {hostesses.length > 0 && (
-                                    <div className="print:text-[6px]">
-                                      H:{hostesses.join(',')}
+                                    <div className="print:text-[8px]">
+                                      H: {hostesses.join(', ')}
                                     </div>
                                   )}
                                   {priv.prisePar && (
-                                    <div className="print:text-[6px]">
-                                      Par:{priv.prisePar}
+                                    <div className="print:text-[8px]">
+                                      Par: {priv.prisePar}
                                     </div>
                                   )}
                                   {priv.commentaire && (
-                                    <div className="print:text-[6px]">
+                                    <div className="print:text-[8px]">
                                       {priv.commentaire}
                                     </div>
                                   )}
