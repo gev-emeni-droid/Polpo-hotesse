@@ -1411,7 +1411,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                         className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md hover:border-gray-300"
                       >
                         <div className="p-5">
-                          <h3 className="text-lg font-semibold truncate" style={{ color: 'var(--color-primary)' }} title={c.title}>{c.title}</h3>
+                          <h3 className="text-lg font-semibold truncate" style={{ color: '#000000' }} title={c.title}>{c.title}</h3>
                           <p className="text-xs text-gray-500 mt-1.5">{createdLabel}</p>
                           <div className="mt-3 space-y-0.5 text-gray-700">
                             <p className="text-sm"><strong className="font-semibold">Privatisations :</strong> {privCount}</p>
