@@ -2471,15 +2471,17 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
 
         {/* Modal ajout privatisation */}
         {isPrivModalOpen && selectedCalendar && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 max-h-[80vh] overflow-y-auto">
-              <h3 className="text-lg font-semibold text-[#163667] mb-4">{editingPriv ? 'Modifier la privatisation' : 'Ajouter une privatisation'}</h3>
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40 p-4">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
+              <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+                <h3 className="text-lg font-semibold text-[#163667]">{editingPriv ? 'Modifier la privatisation' : 'Ajouter une privatisation'}</h3>
+              </div>
               
               {/* Onglets */}
-              <div className="flex gap-2 mb-6 border-b border-gray-200">
+              <div className="flex gap-2 px-6 py-0 border-b border-gray-200 flex-shrink-0 overflow-x-auto">
                 <button
                   onClick={() => setPrivModalActiveTab('general')}
-                  className={`px-4 py-2 font-medium text-sm transition-colors ${
+                  className={`px-4 py-3 font-medium text-sm transition-colors whitespace-nowrap ${
                     privModalActiveTab === 'general'
                       ? 'text-[#163667] border-b-2 border-[#163667]'
                       : 'text-gray-600 hover:text-gray-800'
@@ -2489,7 +2491,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                 </button>
                 <button
                   onClick={() => setPrivModalActiveTab('infos_client')}
-                  className={`px-4 py-2 font-medium text-sm transition-colors ${
+                  className={`px-4 py-3 font-medium text-sm transition-colors whitespace-nowrap ${
                     privModalActiveTab === 'infos_client'
                       ? 'text-[#163667] border-b-2 border-[#163667]'
                       : 'text-gray-600 hover:text-gray-800'
@@ -2501,7 +2503,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                 </button>
                 <button
                   onClick={() => setPrivModalActiveTab('documents')}
-                  className={`px-4 py-2 font-medium text-sm transition-colors ${
+                  className={`px-4 py-3 font-medium text-sm transition-colors whitespace-nowrap ${
                     privModalActiveTab === 'documents'
                       ? 'text-[#163667] border-b-2 border-[#163667]'
                       : 'text-gray-600 hover:text-gray-800'
@@ -2513,9 +2515,11 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                 </button>
               </div>
 
+              {/* Contenu des onglets - scrollable */}
+              <div className="flex-1 overflow-y-auto px-6 py-4">
               {/* Contenu des onglets */}
               {privModalActiveTab === 'general' && (
-                <form onSubmit={handleAddPrivatisation} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <form id="form-general" onSubmit={handleAddPrivatisation} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div>
                     <label className="block text-xs text-gray-700 mb-2 font-medium">Nom de la privat</label>
                     <input
@@ -2667,21 +2671,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                       onChange={(e) => setPrivComment(e.target.value)}
                     />
                   </div>
-                  <div className="md:col-span-2 flex justify-end gap-2 text-sm pt-2 border-t border-gray-200">
-                    <button
-                      type="button"
-                      onClick={() => setIsPrivModalOpen(false)}
-                      className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium transition-colors"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      className="bg-[#163667] text-white text-sm font-semibold py-2 px-5 rounded-lg hover:bg-[#0f2851] transition-colors"
-                    >
-                      {editingPriv ? 'Modifier' : 'Ajouter'}
-                    </button>
-                  </div>
                 </form>
               )}
 
@@ -2732,22 +2721,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                       value={clientAdresse}
                       onChange={(e) => setClientAdresse(e.target.value)}
                     />
-                  </div>
-                  <div className="flex justify-end gap-2 text-sm pt-2 border-t border-gray-200">
-                    <button
-                      type="button"
-                      onClick={() => setIsPrivModalOpen(false)}
-                      className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium transition-colors"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveClientInfo}
-                      className="bg-[#163667] text-white text-sm font-semibold py-2 px-5 rounded-lg hover:bg-[#0f2851] transition-colors"
-                    >
-                      Enregistrer
-                    </button>
                   </div>
                 </div>
               )}
@@ -2820,18 +2793,52 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                       </div>
                     </div>
                   )}
-
-                  <div className="flex justify-end gap-2 text-sm pt-2 border-t border-gray-200">
-                    <button
-                      type="button"
-                      onClick={() => setIsPrivModalOpen(false)}
-                      className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium transition-colors"
-                    >
-                      Fermer
-                    </button>
-                  </div>
                 </div>
               )}
+              </div>
+
+              {/* Footer avec boutons communs */}
+              <div className="px-6 py-4 border-t border-gray-200 flex-shrink-0 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPrivModalOpen(false)}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  {privModalActiveTab === 'general' ? 'Annuler' : 'Fermer'}
+                </button>
+
+                {privModalActiveTab === 'general' && (
+                  <button
+                    form="form-general"
+                    type="submit"
+                    style={{
+                      backgroundColor: (() => {
+                        const palette = COLOR_PALETTES.find(p => p.id === selectedTheme);
+                        return palette?.colors?.primary || '#163667';
+                      })(),
+                    }}
+                    className="text-white text-sm font-semibold py-2 px-5 rounded-lg hover:opacity-90 transition-opacity"
+                  >
+                    {editingPriv ? 'Modifier' : 'Ajouter'}
+                  </button>
+                )}
+
+                {privModalActiveTab === 'infos_client' && (
+                  <button
+                    type="button"
+                    onClick={handleSaveClientInfo}
+                    style={{
+                      backgroundColor: (() => {
+                        const palette = COLOR_PALETTES.find(p => p.id === selectedTheme);
+                        return palette?.colors?.primary || '#163667';
+                      })(),
+                    }}
+                    className="text-white text-sm font-semibold py-2 px-5 rounded-lg hover:opacity-90 transition-opacity"
+                  >
+                    Enregistrer
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
