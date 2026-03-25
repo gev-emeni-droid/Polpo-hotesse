@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLocalStorage } from '../hooks/useLocalStorage.js';
 import { COLOR_PALETTES } from '../themes.js';
 
 export default function ClientsPage() {
   const navigate = useNavigate();
-  const [selectedTheme] = useLocalStorage('hotesse_selected_theme', 'navy');
+  const [selectedTheme, setSelectedTheme] = useState('navy');
   
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -17,6 +16,21 @@ export default function ClientsPage() {
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   const themeColor = COLOR_PALETTES.find(p => p.id === selectedTheme)?.colors?.primary || '#163667';
+
+  // Load theme from API
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/hotesse/theme');
+        const data = await res.json();
+        if (data.ok && data.theme_id) {
+          setSelectedTheme(data.theme_id);
+        }
+      } catch (e) {
+        console.error('Error loading theme:', e);
+      }
+    })();
+  }, []);
 
   // Fetch clients list
   useEffect(() => {
@@ -79,6 +93,37 @@ export default function ClientsPage() {
     } catch (error) {
       console.error('Error exporting clients:', error);
       alert('Erreur lors de l\'export');
+    }
+  };
+
+  const downloadDocument = (doc) => {
+    try {
+      if (!doc.file_data) {
+        alert('Document non disponible');
+        return;
+      }
+      
+      // Convertir base64 en blob
+      const byteCharacters = atob(doc.file_data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: doc.file_type || 'application/octet-stream' });
+      
+      // Créer lien de téléchargement
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.file_name || 'document';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      alert('Erreur lors du téléchargement');
     }
   };
 
@@ -158,10 +203,15 @@ export default function ClientsPage() {
                     </label>
                     <div className="space-y-2">
                       {priv.documents.map((doc) => (
-                        <div key={doc.id} className="flex items-center justify-between p-2 rounded" style={{ backgroundColor: `${themeColor}10` }}>
-                          <span className="text-sm text-gray-700">{doc.file_name}</span>
+                        <button
+                          key={doc.id}
+                          onClick={() => downloadDocument(doc)}
+                          className="w-full flex items-center justify-between p-2 rounded hover:shadow-md transition-all cursor-pointer text-left"
+                          style={{ backgroundColor: `${themeColor}10` }}
+                        >
+                          <span className="text-sm text-gray-700 font-medium">{doc.file_name}</span>
                           <span className="text-xs font-medium" style={{ color: themeColor }}>{(doc.file_size / 1024).toFixed(2)} KB</span>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>

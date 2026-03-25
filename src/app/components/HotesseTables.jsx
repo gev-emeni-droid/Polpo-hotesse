@@ -60,7 +60,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [weekIndex, setWeekIndex] = useState(0);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsActiveTab, setSettingsActiveTab] = useState('profil'); // 'profil' or 'staff'
-  const [selectedTheme, setSelectedTheme] = useLocalStorage('hotesse_selected_theme', 'navy');
+  const [selectedTheme, setSelectedTheme] = useState('navy');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -209,6 +209,23 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
       })();
     }
   }, [selectedCalendar?.id]);
+
+  // Load default theme on app startup
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/hotesse/theme');
+        const data = await res.json();
+        if (data.ok && data.theme_id) {
+          setSelectedTheme(data.theme_id);
+          const palette = COLOR_PALETTES.find(p => p.id === data.theme_id);
+          if (palette) {
+            applyTheme(palette);
+          }
+        }
+      } catch (_) {}
+    })();
+  }, []);
 
   // Load custom logo and other settings from DB on app startup
   useEffect(() => {
