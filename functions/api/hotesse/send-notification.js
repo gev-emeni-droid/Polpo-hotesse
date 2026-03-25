@@ -4,7 +4,7 @@ export async function onRequest(context) {
   }
 
   try {
-    const { email, subject, message, calendarUrl, logo } = await context.request.json();
+    const { email, subject, message, calendarUrl } = await context.request.json();
 
     if (!email || !subject || !message) {
       return new Response(
@@ -15,14 +15,13 @@ export async function onRequest(context) {
 
     const RESEND_API_KEY = context.env.RESEND_API_KEY;
     const SENDER_EMAIL = 'notifications@l-iamani.com';
-
-    // Récupérer l'adresse mail du client depuis la DB si elle existe
-    const settingsRes = await context.env.DB.prepare('SELECT sender_email, custom_logo FROM hotesse_settings WHERE id = ?').bind('global').first();
+    
+    // Récupérer l'adresse mail du client depuis la DB
+    const settingsRes = await context.env.DB.prepare('SELECT sender_email FROM hotesse_settings WHERE id = ?').bind('global').first();
     const senderEmail = settingsRes?.sender_email || SENDER_EMAIL;
-    const dbLogo = settingsRes?.custom_logo;
-
-    // Utiliser le logo passé en paramètre, ou celui de la DB
-    const finalLogo = logo || dbLogo;
+    
+    // URL du logo hébergé dans public/
+    const logoUrl = `${new URL(context.request.url).origin}/UwFsj.jpg`;
 
     // Construire le HTML du mail avec logo en bas au centre
     let htmlContent = `
@@ -37,7 +36,7 @@ export async function onRequest(context) {
             .greeting { margin-bottom: 20px; font-size: 16px; }
             .message { margin: 20px 0; font-size: 16px; }
             .link-section { margin: 30px 0; text-align: center; }
-            .cta-button { display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; }
+            .cta-button { display: inline-block; padding: 12px 24px; background-color: #555555; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; }
             .footer { margin-top: 40px; text-align: center; padding-top: 20px; border-top: 1px solid #eee; }
             .logo-container { text-align: center; margin-top: 30px; }
             .logo-container img { max-width: 100px; width: 100%; height: auto; display: block; margin: 0 auto; }
@@ -56,7 +55,7 @@ export async function onRequest(context) {
                 <a href="${calendarUrl || '#'}" class="cta-button">Consulter le calendrier</a>
               </div>
               <div class="footer">
-                ${finalLogo ? `<div class="logo-container"><img src="${finalLogo}" alt="Logo" style="max-width: 120px; height: auto; display: block; margin: 0 auto;"></div>` : ''}
+                <div class="logo-container"><img src="${logoUrl}" alt="Logo" style="max-width: 100px; height: auto; display: block; margin: 0 auto;"></div>
               </div>
             </div>
           </div>

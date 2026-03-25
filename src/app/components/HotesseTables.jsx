@@ -709,7 +709,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   subject: subject,
                   message: message,
                   calendarUrl: calendarUrl,
-                  logo: customLogo,
                 }),
               });
             } catch (error) {
