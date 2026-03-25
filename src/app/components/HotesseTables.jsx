@@ -60,7 +60,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [weekIndex, setWeekIndex] = useState(0);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsActiveTab, setSettingsActiveTab] = useState('profil'); // 'profil' or 'staff'
-  const [selectedTheme, setSelectedTheme] = useState('navy');
+  const [selectedTheme, setSelectedTheme] = useLocalStorage('hotesse_selected_theme', 'navy');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
