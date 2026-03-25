@@ -57,12 +57,12 @@ const SettingsModal = ({ onClose, prisePar, setPrisePar, encaisserPar, setEncais
           </div>
 
           <div>
-            <label htmlFor="theme-select" className="block text-sm font-medium text-gray-700">Palette de couleurs</label>
+            <label htmlFor="theme-select" className="block text-sm font-medium text-gray-700 mb-2">🎨 Palette de couleurs</label>
             <select 
               id="theme-select" 
               value={selectedTheme} 
               onChange={e => handleThemeChange(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white"
+              className="mt-1 block w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {/* Classical Palettes */}
               <optgroup label="Classique">
@@ -84,16 +84,16 @@ const SettingsModal = ({ onClose, prisePar, setPrisePar, encaisserPar, setEncais
               return palette ? (
                 <div className="mt-3 flex gap-2">
                   <div className="flex-1 p-3 rounded border" style={{ backgroundColor: palette.primary }}>
-                    <div className="text-xs text-white">Primary</div>
+                    <div className="text-xs text-white font-semibold">Primary</div>
                   </div>
                   <div className="flex-1 p-3 rounded border" style={{ backgroundColor: palette.secondary, color: palette.primary }}>
-                    <div className="text-xs">Secondary</div>
+                    <div className="text-xs font-semibold">Secondary</div>
                   </div>
                   <div className="flex-1 p-3 rounded border" style={{ backgroundColor: palette.accent, color: '#ffffff' }}>
-                    <div className="text-xs">Accent</div>
+                    <div className="text-xs text-white font-semibold">Accent</div>
                   </div>
                   <div className="flex-1 p-3 rounded border" style={{ backgroundColor: palette.background }}>
-                    <div className="text-xs">BG</div>
+                    <div className="text-xs font-semibold">BG</div>
                   </div>
                 </div>
               ) : null;
