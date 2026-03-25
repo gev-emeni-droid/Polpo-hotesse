@@ -1214,10 +1214,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
             <div className="mb-3 text-center back-link print:hidden">
               <button
                 type="button"
-                className="text-xs font-medium transition-colors"
-                style={{ color: 'var(--color-primary)' }}
-                onMouseEnter={(e) => e.target.style.color = 'var(--color-primary-dark)' }
-                onMouseLeave={(e) => e.target.style.color = 'var(--color-primary)' }
+                className="text-xs text-[#163667] hover:text-[#0f2851] font-medium transition-colors"
                 onClick={() => {
                   setSelectedCalendarId(null);
                   navigate('/hotesse');
@@ -1914,14 +1911,10 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                       return (
                         <div
                           key={`w-${di}`}
-                          className="min-h-[10rem] border-b border-r border-gray-100 p-3 align-top break-words"
+                          className="min-h-[10rem] border-b border-r border-gray-100 p-2 align-top break-words"
                         >
-                          <div className="text-base font-semibold text-gray-700 mb-2">
-                            {day.toLocaleDateString('fr-FR', {
-                              weekday: 'long',
-                              day: 'numeric',
-                              month: 'numeric',
-                            })}
+                          <div className="text-[11px] font-semibold text-gray-700 mb-1">
+                            {day.getDate()}
                           </div>
                           <div className="space-y-3">
                             {dayPrivs.map((priv) => {
@@ -2112,7 +2105,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         {isCreateCalOpen && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
             <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
-              <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-primary)' }}>Créer un Calendrier Privat</h3>
+              <h3 className="text-lg font-semibold text-[#163667] mb-4">Créer un Calendrier Privat</h3>
               <form onSubmit={handleCreateCalendar} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div>
                   <label className="block text-xs text-gray-700 mb-2 font-medium">Mois</label>
@@ -2148,13 +2141,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                 <button
                   type="button"
                   onClick={handleCreateCalendar}
-                  className="px-4 py-2 rounded-lg font-semibold transition-colors"
-                  style={{
-                    backgroundColor: 'var(--color-primary)',
-                    color: 'var(--color-text-on-primary)'
-                  }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--color-primary-dark)'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--color-primary)'}
+                  className="px-4 py-2 rounded-lg bg-[#163667] text-white font-semibold hover:bg-[#0f2851] transition-colors"
                 >
                   Créer
                 </button>
@@ -2167,7 +2154,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         {isPrivModalOpen && selectedCalendar && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
             <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 max-h-[80vh] overflow-y-auto">
-              <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-primary)' }}>{editingPriv ? 'Modifier la privatisation' : 'Ajouter une privatisation'}</h3>
+              <h3 className="text-lg font-semibold text-[#163667] mb-4">{editingPriv ? 'Modifier la privatisation' : 'Ajouter une privatisation'}</h3>
               <form onSubmit={handleAddPrivatisation} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
                   <label className="block text-xs text-gray-700 mb-2 font-medium">Nom de la privat</label>
@@ -2330,13 +2317,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   </button>
                   <button
                     type="submit"
-                    className="text-sm font-semibold py-2 px-5 rounded-lg transition-colors"
-                    style={{
-                      backgroundColor: 'var(--color-primary)',
-                      color: 'var(--color-text-on-primary)'
-                    }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--color-primary-dark)'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--color-primary)'}
+                    className="bg-[#163667] text-white text-sm font-semibold py-2 px-5 rounded-lg hover:bg-[#0f2851] transition-colors"
                   >
                     {editingPriv ? 'Modifier' : 'Ajouter'}
                   </button>
@@ -2607,13 +2588,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                     <button
                       type="button"
                       onClick={handleAddNotifContact}
-                      className="text-xs font-semibold py-1.5 px-3 rounded-lg transition-colors"
-                      style={{
-                        backgroundColor: 'var(--color-primary)',
-                        color: 'var(--color-text-on-primary)'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--color-primary-dark)'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--color-primary)'}
+                      className="bg-[#163667] text-white text-xs font-semibold py-1.5 px-3 rounded-lg hover:bg-opacity-90"
                     >
                       Ajouter le contact
                     </button>
@@ -2638,8 +2613,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            className="text-[11px] hover:underline"
-                            style={{ color: 'var(--color-primary)' }}
+                            className="text-[11px] text-[#163667] hover:underline"
                             onClick={() => {
                               setEditingNotifId(c.id);
                               setNewNotifName(c.name || '');
