@@ -83,6 +83,20 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [privColor, setPrivColor] = useState('bleu'); // 'bleu' | 'violet'
   const [privComment, setPrivComment] = useState('');
 
+  // Onglets du modal de privatisation
+  const [privModalActiveTab, setPrivModalActiveTab] = useState('general'); // 'general' | 'infos_client' | 'documents'
+
+  // Form state pour Infos client
+  const [clientNom, setClientNom] = useState('');
+  const [clientPrenom, setClientPrenom] = useState('');
+  const [clientMail, setClientMail] = useState('');
+  const [clientTelephone, setClientTelephone] = useState('');
+  const [clientAdresse, setClientAdresse] = useState('');
+
+  // Form state pour Documents
+  const [privDocuments, setPrivDocuments] = useState([]);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+
   // Ref pour le calcul différentiel du "Nombre d'hôtesses nécessaire"
   const prevHostessCountRef = useRef(0);
 
@@ -102,7 +116,48 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     }
   }, [privHostesses, isPrivModalOpen]);
 
-  const [editingPriv, setEditingPriv] = useState(null);
+  // Charger les infos client et documents quand on édite une privatisation
+  useEffect(() => {
+    if (!editingPriv || !editingPriv.id) {
+      // Reset when closing
+      setClientNom('');
+      setClientPrenom('');
+      setClientMail('');
+      setClientTelephone('');
+      setClientAdresse('');
+      setPrivDocuments([]);
+      setPrivModalActiveTab('general');
+      return;
+    }
+
+    // Load client info
+    (async () => {
+      try {
+        const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/client-info`);
+        const data = await res.json();
+        if (data && data.nom !== undefined) {
+          setClientNom(data.nom || '');
+          setClientPrenom(data.prenom || '');
+          setClientMail(data.mail || '');
+          setClientTelephone(data.telephone || '');
+          setClientAdresse(data.adresse_postale || '');
+        }
+      } catch (err) {
+        console.error('Error loading client info:', err);
+      }
+    })();
+
+    // Load documents
+    (async () => {
+      try {
+        const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/documents`);
+        const docs = await res.json();
+        setPrivDocuments(Array.isArray(docs) ? docs : []);
+      } catch (err) {
+        console.error('Error loading documents:', err);
+      }
+    })();
+  }, [editingPriv]);
 
   const selectedCalendar = calendars.find(c => c.id === selectedCalendarId) || null;
   const isReadOnly = archivesMode || (selectedCalendar && selectedCalendar.isArchived);
@@ -981,6 +1036,119 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         console.error('Delete error:', e2);
       }
     })();
+  };
+
+  // Sauvegarder les infos client d'une privatisation
+  const handleSaveClientInfo = async () => {
+    if (!editingPriv || !editingPriv.id) return;
+
+    try {
+      const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/client-info`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          nom: clientNom,
+          prenom: clientPrenom,
+          mail: clientMail,
+          telephone: clientTelephone,
+          adresse_postale: clientAdresse
+        })
+      });
+
+      if (res.ok) {
+        console.log('Client info saved successfully');
+      } else {
+        console.error('Failed to save client info:', res.status);
+      }
+    } catch (err) {
+      console.error('Error saving client info:', err);
+    }
+  };
+
+  // Upload un document pour une privatisation
+  const handleUploadDocument = async (file) => {
+    if (!editingPriv || !editingPriv.id || !file) return;
+
+    setIsUploadingDoc(true);
+
+    try {
+      // Convertir le fichier en Base64
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64Data = e.target.result.split(',')[1]; // Récupérer la partie Base64
+
+        const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/documents`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            file_name: file.name,
+            file_data: base64Data,
+            mime_type: file.type,
+            uploaded_by: 'current_user' // À remplacer par l'utilisateur actuel si disponible
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Document uploaded:', data);
+          // Recharger la liste des documents
+          const docsRes = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/documents`);
+          const docs = await docsRes.json();
+          setPrivDocuments(Array.isArray(docs) ? docs : []);
+        } else {
+          console.error('Failed to upload document:', res.status);
+        }
+
+        setIsUploadingDoc(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Error uploading document:', err);
+      setIsUploadingDoc(false);
+    }
+  };
+
+  // Télécharger un document
+  const handleDownloadDocument = async (docId, fileName) => {
+    try {
+      const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/document?doc_id=${encodeURIComponent(docId)}`);
+      if (!res.ok) {
+        console.error('Failed to download document');
+        return;
+      }
+
+      const data = await res.json();
+      const link = document.createElement('a');
+      link.href = `data:${data.mime_type};base64,${data.file_data}`;
+      link.download = data.file_name || fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Error downloading document:', err);
+    }
+  };
+
+  // Supprimer un document
+  const handleDeleteDocument = async (docId) => {
+    if (!window.confirm('Supprimer ce document ?')) return;
+
+    try {
+      const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/documents?doc_id=${encodeURIComponent(docId)}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        // Recharger la liste des documents
+        const docsRes = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/documents`);
+        const docs = await docsRes.json();
+        setPrivDocuments(Array.isArray(docs) ? docs : []);
+      } else {
+        console.error('Failed to delete document:', res.status);
+      }
+    } catch (err) {
+      console.error('Error deleting document:', err);
+    }
   };
 
   // Export Excel du calendrier sélectionné
@@ -2298,176 +2466,366 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         {/* Modal ajout privatisation */}
         {isPrivModalOpen && selectedCalendar && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 max-h-[80vh] overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 max-h-[80vh] overflow-y-auto">
               <h3 className="text-lg font-semibold text-[#163667] mb-4">{editingPriv ? 'Modifier la privatisation' : 'Ajouter une privatisation'}</h3>
-              <form onSubmit={handleAddPrivatisation} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div>
-                  <label className="block text-xs text-gray-700 mb-2 font-medium">Nom de la privat</label>
-                  <input
-                    type="text"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                    value={privName}
-                    onChange={(e) => setPrivName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-700 mb-2 font-medium">Nombre de personnes</label>
-                  <input
-                    type="number"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                    value={privPeople}
-                    onChange={(e) => setPrivPeople(e.target.value)}
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-700 mb-2 font-medium">Nombre d'hôtesses LBE</label>
-                  <input
-                    type="number"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                    min="0"
-                    value={(() => {
-                      const lbeEntry = privHostesses.find(h => /^\d+ LBE$/.test(h));
-                      return lbeEntry ? parseInt(lbeEntry, 10) : '';
-                    })()}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value, 10);
-                      const count = isNaN(val) ? 0 : val;
-                      setPrivHostesses(prev => {
-                        const others = prev.filter(h => !/^\d+ LBE$/.test(h));
-                        return count > 0 ? [...others, `${count} LBE`] : others;
-                      });
-                    }}
-                    placeholder="Ex: 5"
-                  />
-                </div>
-                <div className="md:col-span-1">
-                  <label className="block text-xs text-gray-700 mb-2 font-medium">Hôtesses</label>
-                  <div className="border border-gray-300 rounded-lg px-3 py-2 text-xs bg-white max-h-24 overflow-auto space-y-1.5">
-                    {hostessOptions.length === 0 && (
-                      <div className="text-[11px] text-gray-400">Aucune hôtesse configurée.</div>
-                    )}
-                    {hostessOptions.map((name) => {
-                      const checked = privHostesses.includes(name);
-                      return (
-                        <label key={name} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
-                          <input
-                            type="checkbox"
-                            className="h-3 w-3"
-                            checked={checked}
-                            onChange={() => {
-                              setPrivHostesses(prev => (
-                                prev.includes(name)
-                                  ? prev.filter(h => h !== name)
-                                  : [...prev, name]
-                              ));
-                            }}
-                          />
-                          <span className="text-xs">{name}</span>
-                        </label>
-                      );
-                    })}
+              
+              {/* Onglets */}
+              <div className="flex gap-2 mb-6 border-b border-gray-200">
+                <button
+                  onClick={() => setPrivModalActiveTab('general')}
+                  className={`px-4 py-2 font-medium text-sm transition-colors ${
+                    privModalActiveTab === 'general'
+                      ? 'text-[#163667] border-b-2 border-[#163667]'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Général
+                </button>
+                <button
+                  onClick={() => setPrivModalActiveTab('infos_client')}
+                  className={`px-4 py-2 font-medium text-sm transition-colors ${
+                    privModalActiveTab === 'infos_client'
+                      ? 'text-[#163667] border-b-2 border-[#163667]'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                  disabled={!editingPriv}
+                  title={!editingPriv ? 'Créer d\'abord la privatisation' : ''}
+                >
+                  Infos client
+                </button>
+                <button
+                  onClick={() => setPrivModalActiveTab('documents')}
+                  className={`px-4 py-2 font-medium text-sm transition-colors ${
+                    privModalActiveTab === 'documents'
+                      ? 'text-[#163667] border-b-2 border-[#163667]'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                  disabled={!editingPriv}
+                  title={!editingPriv ? 'Créer d\'abord la privatisation' : ''}
+                >
+                  Documents
+                </button>
+              </div>
+
+              {/* Contenu des onglets */}
+              {privModalActiveTab === 'general' && (
+                <form onSubmit={handleAddPrivatisation} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">Nom de la privat</label>
+                    <input
+                      type="text"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      value={privName}
+                      onChange={(e) => setPrivName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">Nombre de personnes</label>
+                    <input
+                      type="number"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      value={privPeople}
+                      onChange={(e) => setPrivPeople(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">Nombre d'hôtesses LBE</label>
+                    <input
+                      type="number"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      min="0"
+                      value={(() => {
+                        const lbeEntry = privHostesses.find(h => /^\d+ LBE$/.test(h));
+                        return lbeEntry ? parseInt(lbeEntry, 10) : '';
+                      })()}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        const count = isNaN(val) ? 0 : val;
+                        setPrivHostesses(prev => {
+                          const others = prev.filter(h => !/^\d+ LBE$/.test(h));
+                          return count > 0 ? [...others, `${count} LBE`] : others;
+                        });
+                      }}
+                      placeholder="Ex: 5"
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">Hôtesses</label>
+                    <div className="border border-gray-300 rounded-lg px-3 py-2 text-xs bg-white max-h-24 overflow-auto space-y-1.5">
+                      {hostessOptions.length === 0 && (
+                        <div className="text-[11px] text-gray-400">Aucune hôtesse configurée.</div>
+                      )}
+                      {hostessOptions.map((name) => {
+                        const checked = privHostesses.includes(name);
+                        return (
+                          <label key={name} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
+                            <input
+                              type="checkbox"
+                              className="h-3 w-3"
+                              checked={checked}
+                              onChange={() => {
+                                setPrivHostesses(prev => (
+                                  prev.includes(name)
+                                    ? prev.filter(h => h !== name)
+                                    : [...prev, name]
+                                ));
+                              }}
+                            />
+                            <span className="text-xs">{name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">Prise par</label>
+                    <select
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      value={privPrisePar}
+                      onChange={(e) => setPrivPrisePar(e.target.value)}
+                    >
+                      <option value="">Sélectionner</option>
+                      {priseParOptions.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">Heure début</label>
+                    <input
+                      type="time"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      value={privStart}
+                      onChange={(e) => setPrivStart(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">Heure fin</label>
+                    <input
+                      type="time"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      value={privEnd}
+                      onChange={(e) => setPrivEnd(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">Date</label>
+                    <input
+                      type="date"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      value={privDate}
+                      min={`${selectedCalendar.year}-${String(selectedCalendar.month + 1).padStart(2, '0')}-01`}
+                      max={`${selectedCalendar.year}-${String(selectedCalendar.month + 1).padStart(2, '0')}-${String(getDaysInMonth(selectedCalendar.month, selectedCalendar.year).length).padStart(2, '0')}`}
+                      onChange={(e) => setPrivDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">Couleur</label>
+                    <div className="flex items-center gap-4 text-xs text-gray-700">
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="priv-color"
+                          value="bleu"
+                          checked={privColor === 'bleu'}
+                          onChange={(e) => setPrivColor(e.target.value)}
+                        />
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-full bg-blue-500" />
+                          Bleu
+                        </span>
+                      </label>
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="priv-color"
+                          value="violet"
+                          checked={privColor === 'violet'}
+                          onChange={(e) => setPrivColor(e.target.value)}
+                        />
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-full bg-purple-500" />
+                          Violet
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">Nombre d'hôtesses nécessaire</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      value={privComment}
+                      onChange={(e) => setPrivComment(e.target.value)}
+                    />
+                  </div>
+                  <div className="md:col-span-2 flex justify-end gap-2 text-sm pt-2 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => setIsPrivModalOpen(false)}
+                      className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium transition-colors"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-[#163667] text-white text-sm font-semibold py-2 px-5 rounded-lg hover:bg-[#0f2851] transition-colors"
+                    >
+                      {editingPriv ? 'Modifier' : 'Ajouter'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Onglet Infos client */}
+              {privModalActiveTab === 'infos_client' && (
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">NOM</label>
+                    <input
+                      type="text"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      value={clientNom}
+                      onChange={(e) => setClientNom(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">PRENOM</label>
+                    <input
+                      type="text"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      value={clientPrenom}
+                      onChange={(e) => setClientPrenom(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">MAIL</label>
+                    <input
+                      type="email"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      value={clientMail}
+                      onChange={(e) => setClientMail(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">NUMERO DE TELEPHONE</label>
+                    <input
+                      type="tel"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      value={clientTelephone}
+                      onChange={(e) => setClientTelephone(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">ADRESSE POSTALE</label>
+                    <textarea
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      rows="3"
+                      value={clientAdresse}
+                      onChange={(e) => setClientAdresse(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 text-sm pt-2 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => setIsPrivModalOpen(false)}
+                      className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium transition-colors"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveClientInfo}
+                      className="bg-[#163667] text-white text-sm font-semibold py-2 px-5 rounded-lg hover:bg-[#0f2851] transition-colors"
+                    >
+                      Enregistrer
+                    </button>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-700 mb-2 font-medium">Prise par</label>
-                  <select
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                    value={privPrisePar}
-                    onChange={(e) => setPrivPrisePar(e.target.value)}
-                  >
-                    <option value="">Sélectionner</option>
-                    {priseParOptions.map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-700 mb-2 font-medium">Heure début</label>
-                  <input
-                    type="time"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                    value={privStart}
-                    onChange={(e) => setPrivStart(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-700 mb-2 font-medium">Heure fin</label>
-                  <input
-                    type="time"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                    value={privEnd}
-                    onChange={(e) => setPrivEnd(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-700 mb-2 font-medium">Date</label>
-                  <input
-                    type="date"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                    value={privDate}
-                    min={`${selectedCalendar.year}-${String(selectedCalendar.month + 1).padStart(2, '0')}-01`}
-                    max={`${selectedCalendar.year}-${String(selectedCalendar.month + 1).padStart(2, '0')}-${String(getDaysInMonth(selectedCalendar.month, selectedCalendar.year).length).padStart(2, '0')}`}
-                    onChange={(e) => setPrivDate(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-700 mb-2 font-medium">Couleur</label>
-                  <div className="flex items-center gap-4 text-xs text-gray-700">
-                    <label className="inline-flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="priv-color"
-                        value="bleu"
-                        checked={privColor === 'bleu'}
-                        onChange={(e) => setPrivColor(e.target.value)}
-                      />
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded-full bg-blue-500" />
-                        Bleu
-                      </span>
-                    </label>
-                    <label className="inline-flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="priv-color"
-                        value="violet"
-                        checked={privColor === 'violet'}
-                        onChange={(e) => setPrivColor(e.target.value)}
-                      />
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded-full bg-purple-500" />
-                        Violet
-                      </span>
+              )}
+
+              {/* Onglet Documents */}
+              {privModalActiveTab === 'documents' && (
+                <div className="space-y-4 mb-6">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <input
+                      type="file"
+                      id="doc-upload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleUploadDocument(file);
+                        }
+                      }}
+                      disabled={isUploadingDoc}
+                    />
+                    <label htmlFor="doc-upload" className="cursor-pointer">
+                      <div className="text-gray-600 text-sm font-medium mb-2">
+                        {isUploadingDoc ? 'Upload en cours...' : 'Glissez un fichier ou cliquez pour le charger'}
+                      </div>
+                      {!isUploadingDoc && (
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById('doc-upload')?.click()}
+                          className="text-xs text-[#163667] hover:underline"
+                        >
+                          Sélectionner un fichier
+                        </button>
+                      )}
                     </label>
                   </div>
+
+                  {privDocuments.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-gray-700">Documents :</h4>
+                      <div className="space-y-2">
+                        {privDocuments.map((doc) => (
+                          <div key={doc.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-700">{doc.file_name}</p>
+                              <p className="text-xs text-gray-500">
+                                {doc.file_size && `${(parseInt(doc.file_size) / 1024).toFixed(1)} KB`}
+                                {doc.uploaded_at && ` • ${new Date(doc.uploaded_at).toLocaleDateString()}`}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadDocument(doc.id, doc.file_name)}
+                                className="p-2 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Télécharger"
+                              >
+                                ↓
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDocument(doc.id)}
+                                className="p-2 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Supprimer"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 text-sm pt-2 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => setIsPrivModalOpen(false)}
+                      className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium transition-colors"
+                    >
+                      Fermer
+                    </button>
+                  </div>
                 </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs text-gray-700 mb-2 font-medium">Nombre d'hôtesses nécessaire</label>
-                  <input
-                    type="number"
-                    min="0"
-                    className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                    value={privComment}
-                    onChange={(e) => setPrivComment(e.target.value)}
-                  />
-                </div>
-                <div className="md:col-span-2 flex justify-end gap-2 text-sm pt-2 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => setIsPrivModalOpen(false)}
-                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    className="bg-[#163667] text-white text-sm font-semibold py-2 px-5 rounded-lg hover:bg-[#0f2851] transition-colors"
-                  >
-                    {editingPriv ? 'Modifier' : 'Ajouter'}
-                  </button>
-                </div>
-              </form>
+              )}
             </div>
           </div>
         )}
