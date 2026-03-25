@@ -689,39 +689,45 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     const currentPalette = COLOR_PALETTES.find(p => p.id === selectedTheme);
     const themeColor = currentPalette?.colors.primary || '#007bff';
 
-    notifContacts
-      .filter((c) => selectedNotifIds.includes(c.id))
-      .forEach(async (contact) => {
-        const channel = notifChannelById[contact.id] || 'auto';
-        if (channel === 'auto' || channel === 'whatsapp') {
-          if (contact.phone) {
-            const waUrl = `https://wa.me/${encodeURIComponent(contact.phone)}?text=${encodeURIComponent(whatsappMessage)}`;
-            if (typeof window !== 'undefined') {
-              window.open(waUrl, '_blank', 'noopener,noreferrer');
-            }
+    const contactsToNotify = notifContacts.filter((c) => selectedNotifIds.includes(c.id));
+    
+    contactsToNotify.forEach((contact) => {
+      const channel = notifChannelById[contact.id] || 'auto';
+      if (channel === 'auto' || channel === 'whatsapp') {
+        if (contact.phone) {
+          const waUrl = `https://wa.me/${encodeURIComponent(contact.phone)}?text=${encodeURIComponent(whatsappMessage)}`;
+          if (typeof window !== 'undefined') {
+            window.open(waUrl, '_blank', 'noopener,noreferrer');
           }
         }
-        if (channel === 'auto' || channel === 'email') {
-          if (contact.email) {
-            const subject = `Calendrier mis à jour - ${title}`;
-            try {
-              await fetch('/api/hotesse/send-notification', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({
-                  email: contact.email,
-                  subject: subject,
-                  message: message,
-                  calendarUrl: calendarUrl,
-                  themeColor: themeColor,
-                }),
-              });
-            } catch (error) {
+      }
+      if (channel === 'auto' || channel === 'email') {
+        if (contact.email) {
+          const subject = `Calendrier mis à jour - ${title}`;
+          fetch('/api/hotesse/send-notification', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              email: contact.email,
+              subject: subject,
+              message: message,
+              calendarUrl: calendarUrl,
+              themeColor: themeColor,
+            }),
+          })
+            .then((res) => {
+              if (!res.ok) {
+                console.error(`Failed to send email to ${contact.email}: ${res.status}`);
+              } else {
+                console.log(`Email sent to ${contact.email}`);
+              }
+            })
+            .catch((error) => {
               console.error(`Failed to send email to ${contact.email}:`, error);
-            }
-          }
+            });
         }
-      });
+      }
+    });
 
     setIsNotifModalOpen(false);
   };
@@ -1441,8 +1447,21 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   onClick={handleSendNotifications}
                   className={`px-4 py-2 rounded-lg font-semibold text-white transition-colors ${notifContacts.length === 0 || selectedNotifIds.length === 0
                     ? 'bg-gray-300 cursor-not-allowed'
-                    : 'bg-[#163667] hover:bg-[#0f2851]'
+                    : ''
                     }`}
+                  style={notifContacts.length > 0 && selectedNotifIds.length > 0 ? {
+                    backgroundColor: 'var(--color-primary)',
+                  } : {}}
+                  onMouseEnter={(e) => {
+                    if (notifContacts.length > 0 && selectedNotifIds.length > 0) {
+                      e.target.style.backgroundColor = 'var(--color-primary-dark)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (notifContacts.length > 0 && selectedNotifIds.length > 0) {
+                      e.target.style.backgroundColor = 'var(--color-primary)';
+                    }
+                  }}
                 >
                   Envoyer les notifications
                 </button>
