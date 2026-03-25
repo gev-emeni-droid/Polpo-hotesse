@@ -11,7 +11,7 @@ const Header = ({ title, onLogout }) => {
         />
         <h1 
           className="flex-1 text-center text-xl md:text-2xl lg:text-3xl font-extrabold tracking-wide mt-2"
-          style={{ color: 'var(--color-primary)' }}
+          style={{ color: '#000000' }}
         >
           {title}
         </h1>
