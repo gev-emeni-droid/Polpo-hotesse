@@ -9,12 +9,19 @@ const Header = ({ title, onLogout }) => {
           src="/UwFsj.jpg"
           alt="L'IAMANI logo"
         />
-        <h1 className="flex-1 text-center text-xl md:text-2xl lg:text-3xl font-extrabold tracking-wide text-[#163667] mt-2">
+        <h1 
+          className="flex-1 text-center text-xl md:text-2xl lg:text-3xl font-extrabold tracking-wide mt-2"
+          style={{ color: 'var(--color-primary)' }}
+        >
           {title}
         </h1>
         <button
           onClick={onLogout}
-          className="bg-[#163667] text-white font-semibold py-2 px-4 rounded-lg hover:bg-opacity-90 transition-colors"
+          className="text-white font-semibold py-2 px-4 rounded-lg hover:bg-opacity-90 transition-colors"
+          style={{ 
+            backgroundColor: 'var(--color-primary)',
+            color: 'var(--color-text-on-primary)'
+          }}
         >
           Déconnexion
         </button>

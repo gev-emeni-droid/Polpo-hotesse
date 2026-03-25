@@ -1332,14 +1332,18 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                 <button
                   type="button"
                   onClick={() => setIsCreateCalOpen(true)}
-                  className="bg-[#163667] text-white font-semibold py-2 px-5 rounded-lg shadow-md hover:shadow-lg hover:bg-[#0f2851] transition-all duration-200 text-sm"
+                  className="text-white font-semibold py-2 px-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm"
+                  style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-text-on-primary)' }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--color-primary-dark)'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--color-primary)'}
                 >
                   Créer un nouveau calendrier
                 </button>
                 <button
                   type="button"
                   onClick={() => navigate('/hotesse-archives')}
-                  className="bg-white text-[#163667] font-semibold py-2 px-5 rounded-lg border border-gray-300 shadow-sm hover:bg-gray-50 transition-all duration-200 text-sm"
+                  className="bg-white font-semibold py-2 px-5 rounded-lg shadow-sm hover:bg-gray-50 transition-all duration-200 text-sm"
+                  style={{ color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}
                 >
                   Accéder aux archives
                 </button>
@@ -1374,7 +1378,8 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
               <input
                 type="text"
                 placeholder="Rechercher un calendrier..."
-                className="w-full max-w-lg mx-auto block px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#163667] transition-colors"
+                className="w-full max-w-lg mx-auto block px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-1 transition-colors"
+                style={{ '--tw-ring-color': 'var(--color-primary)' }}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />

@@ -1,4 +1,5 @@
 :root {
+  /* Legacy variables - kept for compatibility */
   --brand: #163667;
   --ink: #0b132b;
   --muted: #6b7280;
@@ -8,6 +9,67 @@
   --primary: #0284c7;
   --green: #16a34a;
   --red: #dc2626;
+
+  /* Dynamic theme variables - updated by applyTheme() */
+  --color-primary: #163667;
+  --color-primary-dark: #0f2851;
+  --color-secondary: #FFFFFF;
+  --color-accent: #E74C3C;
+  --color-background: #F5F5F5;
+  --color-text-on-primary: #FFFFFF;
+}
+
+/* Dynamic color utility classes */
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+.bg-primary-dark {
+  background-color: var(--color-primary-dark);
+}
+
+.text-primary {
+  color: var(--color-primary);
+}
+
+.text-primary-light {
+  color: var(--color-secondary);
+}
+
+.text-on-primary {
+  color: var(--color-text-on-primary);
+}
+
+.hover\:bg-primary-dark:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.border-primary {
+  border-color: var(--color-primary);
+}
+
+.focus\:ring-primary:focus {
+  --tw-ring-color: var(--color-primary);
+}
+
+/* Dynamic button styles */
+.btn-primary-dynamic {
+  background-color: var(--color-primary);
+  color: var(--color-text-on-primary);
+  transition: all 0.2s ease;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary-dynamic:hover {
+  background-color: var(--color-primary-dark);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary-dynamic:active {
+  opacity: 0.95;
 }
 
 body {

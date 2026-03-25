@@ -207,14 +207,59 @@ export const getThemeById = (id) => {
   return COLOR_PALETTES.find(palette => palette.id === id) || COLOR_PALETTES[0];
 };
 
+// Helper: Convert hex to RGB
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+};
+
+// Helper: Calculate luminance (0 = dark, 1 = light)
+const getLuminance = (hex) => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return 0.5;
+  return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+};
+
+// Helper: Darken a color by a percentage
+const darkenColor = (hex, percent = 15) => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const factor = 1 - (percent / 100);
+  const darkenedR = Math.round(rgb.r * factor);
+  const darkenedG = Math.round(rgb.g * factor);
+  const darkenedB = Math.round(rgb.b * factor);
+  return `#${[darkenedR, darkenedG, darkenedB].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+};
+
+// Helper: Get appropriate text color (white or black) based on background luminance
+const getContrastingTextColor = (bgHex) => {
+  const luminance = getLuminance(bgHex);
+  return luminance > 0.5 ? '#000000' : '#FFFFFF';
+};
+
 export const applyTheme = (palette) => {
   if (!palette) return;
   
   const root = document.documentElement;
+  const primaryDark = darkenColor(palette.primary, 15);
+  const textColor = getContrastingTextColor(palette.primary);
+  
+  // Set primary theme colors
   root.style.setProperty('--color-primary', palette.primary);
+  root.style.setProperty('--color-primary-dark', primaryDark);
   root.style.setProperty('--color-secondary', palette.secondary);
   root.style.setProperty('--color-accent', palette.accent);
   root.style.setProperty('--color-background', palette.background);
+  
+  // Set text colors that adapt to the primary color
+  root.style.setProperty('--color-text-on-primary', textColor);
+  
+  // Update brand variable for legacy components
+  root.style.setProperty('--brand', palette.primary);
   
   // Store in localStorage for persistence
   localStorage.setItem('selectedTheme', palette.id);
@@ -223,4 +268,10 @@ export const applyTheme = (palette) => {
 export const getStoredTheme = () => {
   const themeId = localStorage.getItem('selectedTheme');
   return themeId ? getThemeById(themeId) : COLOR_PALETTES[0];
+};
+
+// Initialize theme on app load
+export const initializeTheme = () => {
+  const theme = getStoredTheme();
+  applyTheme(theme);
 };
