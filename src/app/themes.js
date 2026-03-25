@@ -1,204 +1,123 @@
-// 22 Color Palettes - 11 Classical + 11 Pastel
+// Color Palettes - Custom Theme
 export const COLOR_PALETTES = [
-  // CLASSICAL PALETTES
+  // PALETTE 1
   {
-    id: 'navy',
-    name: 'Bleu Marine',
-    category: 'Classique',
-    primary: '#163667',
+    id: 'sage-stone',
+    name: 'Sage & Stone',
+    category: 'Moderne',
+    primary: '#CCD5AE',
     secondary: '#FFFFFF',
-    accent: '#E74C3C',
+    accent: '#4A919E',
     background: '#F5F5F5'
   },
+  // PALETTE 2
   {
-    id: 'elegant-black',
-    name: 'Noir Élégant',
-    category: 'Classique',
-    primary: '#1A1A1A',
+    id: 'cream-teal',
+    name: 'Crème & Teal',
+    category: 'Moderne',
+    primary: '#E9EDC9',
     secondary: '#FFFFFF',
-    accent: '#FFD700',
-    background: '#F9F9F9'
+    accent: '#4AA3A2',
+    background: '#FAFAF8'
   },
+  // PALETTE 3
   {
-    id: 'burgundy',
-    name: 'Bordeaux',
-    category: 'Classique',
-    primary: '#8B1538',
+    id: 'deep-navy',
+    name: 'Marine Profond',
+    category: 'Moderne',
+    primary: '#212E53',
     secondary: '#FFFFFF',
-    accent: '#F4A460',
-    background: '#F8F8F8'
+    accent: '#DB6A8F',
+    background: '#F8F8FA'
   },
+  // PALETTE 4
   {
-    id: 'gold-luxury',
-    name: 'Or Luxe',
-    category: 'Classique',
-    primary: '#2C1810',
-    secondary: '#FAF0E6',
-    accent: '#D4AF37',
-    background: '#FFFEF7'
-  },
-  {
-    id: 'dark-green',
-    name: 'Vert Foncé',
-    category: 'Classique',
-    primary: '#1B4332',
+    id: 'teal-bright',
+    name: 'Teal Lumineux',
+    category: 'Moderne',
+    primary: '#A7E0E0',
     secondary: '#FFFFFF',
-    accent: '#FFB703',
-    background: '#F0F9F6'
+    accent: '#4AA3A2',
+    background: '#F0F9F9'
   },
+  // PALETTE 5
   {
-    id: 'royal-purple',
-    name: 'Pourpre Royal',
-    category: 'Classique',
-    primary: '#440254',
+    id: 'sunny-gold',
+    name: 'Or Ensoleillé',
+    category: 'Moderne',
+    primary: '#F5DF4D',
     secondary: '#FFFFFF',
-    accent: '#FDB750',
+    accent: '#212E53',
+    background: '#FFFBF0'
+  },
+  // PALETTE 6
+  {
+    id: 'lavender-gray',
+    name: 'Lavande & Gris',
+    category: 'Moderne',
+    primary: '#AFA4CE',
+    secondary: '#FFFFFF',
+    accent: '#939597',
     background: '#F8F6FB'
   },
+  // PALETTE 7
   {
-    id: 'teal',
-    name: 'Teal',
-    category: 'Classique',
-    primary: '#006064',
+    id: 'seafoam-blue',
+    name: 'Écume & Bleu',
+    category: 'Moderne',
+    primary: '#B0CFD3',
     secondary: '#FFFFFF',
-    accent: '#FF6B9D',
-    background: '#F0F8F9'
+    accent: '#4A919E',
+    background: '#F3F9FA'
   },
+  // PALETTE 8
   {
-    id: 'crimson',
-    name: 'Crimson',
-    category: 'Classique',
-    primary: '#C41E3A',
+    id: 'deep-mystery',
+    name: 'Mystère Profond',
+    category: 'Moderne',
+    primary: '#1C0F12',
     secondary: '#FFFFFF',
-    accent: '#FFE66D',
-    background: '#FEF8F3'
+    accent: '#F27A90',
+    background: '#F5F5F5'
   },
+  // PALETTE 9
   {
-    id: 'charcoal-gray',
-    name: 'Gris Charbon',
-    category: 'Classique',
-    primary: '#36454F',
-    secondary: '#ECF0F1',
-    accent: '#E8B4B8',
-    background: '#F5F7FA'
-  },
-  {
-    id: 'rich-brown',
-    name: 'Marron Riche',
-    category: 'Classique',
-    primary: '#5C4033',
-    secondary: '#FFF8DC',
-    accent: '#CD853F',
-    background: '#FEFBF7'
-  },
-  {
-    id: 'indigo',
-    name: 'Indigo',
-    category: 'Classique',
-    primary: '#4C3C8C',
+    id: 'sage-warm',
+    name: 'Sage Chaleureux',
+    category: 'Moderne',
+    primary: '#A1A27E',
     secondary: '#FFFFFF',
-    accent: '#FF8C42',
-    background: '#F7F5FB'
+    accent: '#CA7C5C',
+    background: '#F9F8F5'
   },
-
-  // PASTEL PALETTES
+  // PALETTE 10
   {
-    id: 'rose-pastel',
-    name: 'Rose Pastel',
-    category: 'Pastel',
-    primary: '#F8BDD0',
+    id: 'rose-earth',
+    name: 'Rose Terracotta',
+    category: 'Moderne',
+    primary: '#BA8383',
     secondary: '#FFFFFF',
-    accent: '#D4A5D4',
-    background: '#FEF9FB'
+    accent: '#CA7C5C',
+    background: '#FAF8F6'
   },
+  // PALETTE 11
   {
-    id: 'lavender-soft',
-    name: 'Lavande Douce',
-    category: 'Pastel',
-    primary: '#E6D4E8',
+    id: 'coral-rose',
+    name: 'Corail Rosé',
+    category: 'Moderne',
+    primary: '#F27A90',
     secondary: '#FFFFFF',
-    accent: '#F9D6E3',
-    background: '#F9F5FB'
+    accent: '#84033C',
+    background: '#FEF5F7'
   },
+  // PALETTE 12
   {
-    id: 'mint-fresh',
-    name: 'Menthe Fraîche',
-    category: 'Pastel',
-    primary: '#BFEFB3',
+    id: 'cream-soft',
+    name: 'Crème Douce',
+    category: 'Moderne',
+    primary: '#C1D5AF',
     secondary: '#FFFFFF',
-    accent: '#FFD6BA',
-    background: '#F5FEFB'
-  },
-  {
-    id: 'apricot-light',
-    name: 'Abricot Clair',
-    category: 'Pastel',
-    primary: '#FFD9B3',
-    secondary: '#FFFFFF',
-    accent: '#D4A5D4',
-    background: '#FFFAF5'
-  },
-  {
-    id: 'sky-blue',
-    name: 'Bleu Ciel',
-    category: 'Pastel',
-    primary: '#B8D8E8',
-    secondary: '#FFFFFF',
-    accent: '#F8BDD0',
-    background: '#F8FAFC'
-  },
-  {
-    id: 'peach-soft',
-    name: 'Pêche Douce',
-    category: 'Pastel',
-    primary: '#F5D9CC',
-    secondary: '#FFFFFF',
-    accent: '#D4D4E8',
-    background: '#FFFAF7'
-  },
-  {
-    id: 'lemon-pale',
-    name: 'Citron Pâle',
-    category: 'Pastel',
-    primary: '#F5E6CC',
-    secondary: '#FFFFFF',
-    accent: '#E8D4D9',
-    background: '#FFFBF5'
-  },
-  {
-    id: 'lilac-light',
-    name: 'Lilas Clair',
-    category: 'Pastel',
-    primary: '#E8D4E8',
-    secondary: '#FFFFFF',
-    accent: '#F5D9CC',
-    background: '#F9F5FB'
-  },
-  {
-    id: 'sage-pastel',
-    name: 'Sage Pastel',
-    category: 'Pastel',
-    primary: '#D4E6D4',
-    secondary: '#FFFFFF',
-    accent: '#E8D4D9',
-    background: '#F8FBFA'
-  },
-  {
-    id: 'sky-soft',
-    name: 'Ciel Doux',
-    category: 'Pastel',
-    primary: '#D9E8F5',
-    secondary: '#FFFFFF',
-    accent: '#F8BDD0',
-    background: '#F8F9FC'
-  },
-  {
-    id: 'coral-pastel',
-    name: 'Corail Pastel',
-    category: 'Pastel',
-    primary: '#F5D4CC',
-    secondary: '#FFFFFF',
-    accent: '#D4E6D4',
+    accent: '#CFABA5',
     background: '#FFFAF8'
   }
 ];
