@@ -1,0 +1,16 @@
+name = "tableauxgenerator-worker"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+account_id = "a765efd32045142f11db525bac5c136e"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "evenement-test"
+database_id = "e43ca145-7560-47c1-a011-930928ce1740"
+
+[ai]
+binding = "AI"
+
+[vars]
+ZENCHEF_IMPORT_MODEL = "@cf/llava-hf/llava-1.5-7b-hf"

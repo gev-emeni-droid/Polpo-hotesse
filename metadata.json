@@ -1,0 +1,5 @@
+{
+  "name": "Suivi des Réservations Polpo",
+  "description": "Une application de gestion des réservations pour le restaurant Polpo, permettant de créer, suivre et archiver des tableaux de réservations pour des événements spéciaux.",
+  "requestFramePermissions": []
+}
