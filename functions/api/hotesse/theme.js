@@ -13,13 +13,31 @@ export const onRequestGet = async ({ env }) => {
       );
     `).run();
     
+    // Clean up old/invalid theme data - remove themes with invalid IDs or orphaned entries
+    const validThemeIds = [
+      'sage-stone', 'cream-teal', 'deep-navy', 'teal-bright', 'sunny-gold',
+      'lavender-gray', 'seafoam-blue', 'deep-mystery', 'sage-warm', 'rose-earth',
+      'coral-rose', 'cream-soft', 'teal-stone', 'rose-navy', 'teal-green',
+      'gray-lavender', 'earth-warm', 'mauve-taupe', 'coral-deep', 'rose-burgundy',
+      'blush-soft', 'sage-soft', 'teal-combo', 'gold-accent'
+    ];
+    const placeholders = validThemeIds.map(() => '?').join(',');
+    await env.DB.prepare(
+      `DELETE FROM hotesse_theme_settings WHERE theme_id NOT IN (${placeholders})`
+    ).bind(...validThemeIds).run();
+    
+    // Remove orphaned entries for archived calendars
+    await env.DB.prepare(
+      `DELETE FROM hotesse_theme_settings WHERE calendar_id NOT IN (SELECT id FROM hotesse_calendars WHERE is_archived = 0)`
+    ).run();
+    
     // Get ALL themes for all ACTIVE calendars
     const themes = await env.DB.prepare(
-      `SELECT ts.calendar_id, ts.theme_id, ts.updated_at, hc.created_at, hc.updated_at as cal_updated_at
+      `SELECT ts.calendar_id, ts.theme_id, ts.updated_at, hc.created_at
        FROM hotesse_theme_settings ts
        JOIN hotesse_calendars hc ON ts.calendar_id = hc.id
        WHERE hc.is_archived = 0
-       ORDER BY ts.updated_at DESC, hc.created_at DESC
+       ORDER BY ts.updated_at DESC
        LIMIT 10`
     ).all();
     
