@@ -1,5 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
-
 export async function onRequest(context) {
   const { request } = context;
   const { searchParams } = new URL(request.url);
@@ -49,7 +47,7 @@ export async function onRequest(context) {
         });
       }
 
-      const id = uuidv4();
+      const id = crypto.randomUUID();
       const now = new Date().toISOString();
       const file_size = file_data.length; // Base64 string length
 
