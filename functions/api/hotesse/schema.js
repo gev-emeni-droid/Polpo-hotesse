@@ -10,6 +10,13 @@ export const ensureHotesseSchema = async (db) => {
     );
   `).run();
 
+  // Add updated_at column if it doesn't exist (retrocompatible migration)
+  try {
+    await db.prepare('ALTER TABLE hotesse_calendars ADD COLUMN updated_at TEXT').run();
+  } catch (_) {
+    // Ignore the error if the column already exists
+  }
+
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS hotesse_privatisations (
       id TEXT PRIMARY KEY,

@@ -23,12 +23,17 @@ export default function ClientsPage() {
       try {
         const res = await fetch('/api/hotesse/theme');
         const data = await res.json();
+        console.log('ClientsPage theme API response:', data);
         if (data.ok && data.theme_id) {
+          console.log('Applying theme:', data.theme_id);
           setSelectedTheme(data.theme_id);
           // Apply theme to CSS
           const palette = COLOR_PALETTES.find(p => p.id === data.theme_id);
           if (palette) {
+            console.log('Palette found:', palette);
             applyTheme(palette);
+          } else {
+            console.warn('Palette not found for', data.theme_id);
           }
         }
       } catch (e) {

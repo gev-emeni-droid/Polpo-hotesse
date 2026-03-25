@@ -545,19 +545,28 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   };
 
   const handleSaveTheme = async (themeId) => {
-    if (!selectedCalendar) return;
+    if (!selectedCalendar) {
+      console.warn('No calendar selected, cannot save theme');
+      return;
+    }
     try {
-      await fetch(`/api/hotesse/calendars/${encodeURIComponent(selectedCalendar.id)}/theme`, {
+      console.log('Saving theme:', themeId, 'for calendar:', selectedCalendar.id);
+      const response = await fetch(`/api/hotesse/calendars/${encodeURIComponent(selectedCalendar.id)}/theme`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ theme_id: themeId })
       });
+      const data = await response.json();
+      console.log('Theme save response:', data);
       setSelectedTheme(themeId);
       const palette = COLOR_PALETTES.find(p => p.id === themeId);
       if (palette) {
+        console.log('Applying palette:', palette.id);
         applyTheme(palette);
       }
-    } catch (_) {}
+    } catch (error) {
+      console.error('Error saving theme:', error);
+    }
   };
 
   // Gestion des contacts de notification (Paramètres)

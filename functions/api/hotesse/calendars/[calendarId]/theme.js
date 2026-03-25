@@ -47,6 +47,7 @@ export const onRequestPut = async ({ env, params, request }) => {
     const themeId = body.theme_id || 'navy';
     const now = new Date().toISOString();
 
+    // Save theme
     await env.DB.prepare(`
       INSERT INTO hotesse_theme_settings (calendar_id, theme_id, updated_at)
       VALUES (?, ?, ?)
@@ -54,6 +55,11 @@ export const onRequestPut = async ({ env, params, request }) => {
         theme_id = excluded.theme_id,
         updated_at = excluded.updated_at
     `).bind(calendarId, themeId, now).run();
+
+    // Also update the calendar's updated_at to mark it as recently modified
+    await env.DB.prepare(`
+      UPDATE hotesse_calendars SET updated_at = ? WHERE id = ?
+    `).bind(now, calendarId).run();
 
     return new Response(
       JSON.stringify({ ok: true, theme_id: themeId }),
