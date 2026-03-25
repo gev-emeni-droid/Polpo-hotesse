@@ -1335,7 +1335,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   onClick={() => setIsCreateCalOpen(true)}
                   className="bg-[#163667] text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-opacity-90 transition-all duration-200 text-lg"
                 >
-                  ➕ Créer un nouveau calendrier
+                  Créer un nouveau calendrier
                 </button>
                 <button
                   type="button"
@@ -1586,7 +1586,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                       onClick={() => { setEditingPriv(null); setIsPrivModalOpen(true); setIsSettingsOpen(false); }}
                       className="bg-[#163667] text-white font-semibold py-2 px-5 rounded-lg hover:bg-opacity-90"
                     >
-                      ➕ Ajouter une privat
+                      Ajouter une privatisation
                     </button>
                     <button
                       type="button"
@@ -2320,7 +2320,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                       : 'border-transparent text-gray-600 hover:text-[#163667]'
                   }`}
                 >
-                  📝 Profil
+                  Profil
                 </button>
                 <button
                   onClick={() => setSettingsActiveTab('staff')}
@@ -2330,7 +2330,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                       : 'border-transparent text-gray-600 hover:text-[#163667]'
                   }`}
                 >
-                  👥 Hôtesses & Commercial
+                  Hôtesses & Commercial
                 </button>
               </div>
 
@@ -2367,32 +2367,74 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   )}
 
                   <div>
-                    <h4 className="text-xs font-semibold text-gray-700 mb-2">🎨 Palette de couleurs</h4>
-                    <select 
-                      value={selectedTheme} 
-                      onChange={(e) => handleSaveTheme(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
-                    >
-                      <optgroup label="Classique">
-                        {COLOR_PALETTES.filter(p => p.category === 'Classique').map(palette => (
-                          <option key={palette.id} value={palette.id}>{palette.name}</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Pastel">
-                        {COLOR_PALETTES.filter(p => p.category === 'Pastel').map(palette => (
-                          <option key={palette.id} value={palette.id}>{palette.name}</option>
-                        ))}
-                      </optgroup>
-                    </select>
+                    <h4 className="text-xs font-semibold text-gray-700 mb-3">Palette de couleurs</h4>
                     
+                    {/* Grille de palettes classiques */}
+                    <div className="mb-5">
+                      <p className="text-xs text-gray-500 font-medium mb-2">Couleurs Classiques</p>
+                      <div className="grid grid-cols-4 gap-2 mb-4">
+                        {COLOR_PALETTES.filter(p => p.category === 'Classique').map(palette => (
+                          <button
+                            key={palette.id}
+                            onClick={() => handleSaveTheme(palette.id)}
+                            className={`p-3 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-1 hover:shadow-md ${
+                              selectedTheme === palette.id 
+                                ? 'border-gray-900 ring-2 ring-blue-400 shadow-lg' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            title={palette.name}
+                          >
+                            <div 
+                              className="w-12 h-12 rounded-md border border-gray-300 shadow-sm"
+                              style={{ backgroundColor: palette.primary }}
+                            />
+                            <span className="text-xs font-semibold text-gray-700 text-center leading-tight line-clamp-2">
+                              {palette.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Grille de palettes pastel */}
+                    <div className="mb-4">
+                      <p className="text-xs text-gray-500 font-medium mb-2">Couleurs Pastel</p>
+                      <div className="grid grid-cols-4 gap-2">
+                        {COLOR_PALETTES.filter(p => p.category === 'Pastel').map(palette => (
+                          <button
+                            key={palette.id}
+                            onClick={() => handleSaveTheme(palette.id)}
+                            className={`p-3 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-1 hover:shadow-md ${
+                              selectedTheme === palette.id 
+                                ? 'border-gray-900 ring-2 ring-blue-400 shadow-lg' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            title={palette.name}
+                          >
+                            <div 
+                              className="w-12 h-12 rounded-md border border-gray-300 shadow-sm"
+                              style={{ backgroundColor: palette.primary }}
+                            />
+                            <span className="text-xs font-semibold text-gray-700 text-center leading-tight line-clamp-2">
+                              {palette.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Aperçu des couleurs */}
                     {(() => {
                       const palette = COLOR_PALETTES.find(p => p.id === selectedTheme);
                       return palette ? (
-                        <div className="mt-2 flex gap-2">
-                          <div className="flex-1 p-2 rounded border text-xs text-white font-semibold text-center" style={{ backgroundColor: palette.primary }}>Primary</div>
-                          <div className="flex-1 p-2 rounded border text-xs font-semibold text-center" style={{ backgroundColor: palette.secondary, color: palette.primary }}>Secondary</div>
-                          <div className="flex-1 p-2 rounded border text-xs text-white font-semibold text-center" style={{ backgroundColor: palette.accent }}>Accent</div>
-                          <div className="flex-1 p-2 rounded border text-xs font-semibold text-center" style={{ backgroundColor: palette.background }}>BG</div>
+                        <div className="mt-4 pt-3 border-t border-gray-200">
+                          <p className="text-xs text-gray-500 font-medium mb-2">Aperçu de la palette sélectionnée</p>
+                          <div className="flex gap-2">
+                            <div className="flex-1 p-2 rounded border text-xs text-white font-semibold text-center" style={{ backgroundColor: palette.primary }}>Primaire</div>
+                            <div className="flex-1 p-2 rounded border text-xs font-semibold text-center" style={{ backgroundColor: palette.secondary, color: palette.primary }}>Secondaire</div>
+                            <div className="flex-1 p-2 rounded border text-xs text-white font-semibold text-center" style={{ backgroundColor: palette.accent }}>Accent</div>
+                            <div className="flex-1 p-2 rounded border text-xs font-semibold text-center" style={{ backgroundColor: palette.background, color: '#666' }}>Fond</div>
+                          </div>
                         </div>
                       ) : null;
                     })()}
