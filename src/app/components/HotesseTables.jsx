@@ -1189,32 +1189,32 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {isFullPage && selectedCalendar && (
           <>
-            <div className="flex justify-center mb-2 print:hidden">
+            <div className="flex justify-center mb-1 print:hidden">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl">
-                <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm flex flex-col items-center justify-center text-center">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">Privat Restaurant</div>
-                  <div className="mt-1 text-2xl font-bold text-[#163667]">
+                <div className="bg-white border border-gray-200 rounded-lg px-4 py-2.5 shadow-sm flex flex-col items-center justify-center text-center">
+                  <div className="text-xs text-gray-500 uppercase tracking-wider font-medium">Privat Restaurant</div>
+                  <div className="mt-0.5 text-xl font-bold text-[#163667]">
                     {selectedPrivStats.restaurant}
                   </div>
                 </div>
-                <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm flex flex-col items-center justify-center text-center">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">Privat Plage</div>
-                  <div className="mt-1 text-2xl font-bold text-[#163667]">
+                <div className="bg-white border border-gray-200 rounded-lg px-4 py-2.5 shadow-sm flex flex-col items-center justify-center text-center">
+                  <div className="text-xs text-gray-500 uppercase tracking-wider font-medium">Privat Plage</div>
+                  <div className="mt-0.5 text-xl font-bold text-[#163667]">
                     {selectedPrivStats.plage}
                   </div>
                 </div>
-                <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm flex flex-col items-center justify-center text-center">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">Privat Total</div>
-                  <div className="mt-1 text-2xl font-bold text-[#163667]">
+                <div className="bg-white border border-gray-200 rounded-lg px-4 py-2.5 shadow-sm flex flex-col items-center justify-center text-center">
+                  <div className="text-xs text-gray-500 uppercase tracking-wider font-medium">Privat Total</div>
+                  <div className="mt-0.5 text-xl font-bold text-[#163667]">
                     {selectedPrivStats.total}
                   </div>
                 </div>
               </div>
             </div>
-            <div className="mb-2 text-center back-link print:hidden">
+            <div className="mb-3 text-center back-link print:hidden">
               <button
                 type="button"
-                className="text-sm text-[#163667] hover:underline"
+                className="text-xs text-[#163667] hover:text-[#0f2851] font-medium transition-colors"
                 onClick={() => {
                   setSelectedCalendarId(null);
                   navigate('/hotesse');
@@ -1230,8 +1230,8 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         {/* Modal notification de mise à jour */}
         {isNotifModalOpen && selectedCalendar && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-5">
-              <h3 className="text-base font-semibold text-[#163667] mb-3">Envoyer une notification de mise à jour</h3>
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+              <h3 className="text-lg font-semibold text-[#163667] mb-3">Envoyer une notification de mise à jour</h3>
               {notifContacts.length === 0 ? (
                 <div className="text-sm text-gray-600 mb-4">
                   Aucun contact n'est configuré pour les notifications. Ajoutez des contacts dans l'onglet Paramètres, puis réessayez.
@@ -1306,7 +1306,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                 <button
                   type="button"
                   onClick={() => setIsNotifModalOpen(false)}
-                  className="px-3 py-2 rounded-lg border border-gray-300 text-gray-600"
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors font-medium"
                 >
                   Annuler
                 </button>
@@ -1314,9 +1314,9 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   type="button"
                   disabled={notifContacts.length === 0 || selectedNotifIds.length === 0}
                   onClick={handleSendNotifications}
-                  className={`px-3 py-2 rounded-lg font-semibold text-white ${notifContacts.length === 0 || selectedNotifIds.length === 0
+                  className={`px-4 py-2 rounded-lg font-semibold text-white transition-colors ${notifContacts.length === 0 || selectedNotifIds.length === 0
                     ? 'bg-gray-300 cursor-not-allowed'
-                    : 'bg-[#163667] hover:bg-opacity-90'
+                    : 'bg-[#163667] hover:bg-[#0f2851]'
                     }`}
                 >
                   Envoyer les notifications
@@ -1327,55 +1327,55 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         )}
         {/* Générateur de calendriers (page actifs) */}
         {!isFullPage && !archivesMode && (
-          <section className="mt-6">
-            <div className="flex flex-col items-center mb-8 gap-4">
-              <div className="flex justify-center items-center gap-4 flex-wrap">
+          <section className="mt-4">
+            <div className="flex flex-col items-center mb-6 gap-5">
+              <div className="flex justify-center items-center gap-3 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setIsCreateCalOpen(true)}
-                  className="bg-[#163667] text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-opacity-90 transition-all duration-200 text-lg"
+                  className="bg-[#163667] text-white font-semibold py-2 px-5 rounded-lg shadow-md hover:shadow-lg hover:bg-[#0f2851] transition-all duration-200 text-sm"
                 >
                   Créer un nouveau calendrier
                 </button>
                 <button
                   type="button"
                   onClick={() => navigate('/hotesse-archives')}
-                  className="bg-[#163667] text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-opacity-90 transition-all duration-200 text-lg"
+                  className="bg-white text-[#163667] font-semibold py-2 px-5 rounded-lg border border-gray-300 shadow-sm hover:bg-gray-50 transition-all duration-200 text-sm"
                 >
                   Accéder aux archives
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 w-full">
-                <div className="bg-white border border-gray-200 rounded-xl px-6 py-3 shadow-sm flex flex-col items-center justify-center text-center">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">
-                    Calendriers actifs ({activeCalendarsCount})
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 w-full">
+                <div className="bg-white border border-gray-200 rounded-lg px-5 py-3 shadow-sm flex flex-col items-center justify-center text-center hover:shadow-md transition-shadow duration-200">
+                  <div className="text-xs text-gray-600 uppercase tracking-wider font-medium">
+                    Calendriers actifs
                   </div>
-                  <div className="mt-1 text-2xl font-bold text-[#163667]">{activeCalendarsCount}</div>
+                  <div className="mt-1 text-xl font-bold text-[#163667]">{activeCalendarsCount}</div>
                 </div>
-                <div className="bg-white border border-gray-200 rounded-xl px-6 py-3 shadow-sm flex flex-col items-center justify-center text-center">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">Calendriers archivés</div>
-                  <div className="mt-1 text-2xl font-bold text-[#163667]">{archivedCalendarsCount}</div>
+                <div className="bg-white border border-gray-200 rounded-lg px-5 py-3 shadow-sm flex flex-col items-center justify-center text-center hover:shadow-md transition-shadow duration-200">
+                  <div className="text-xs text-gray-600 uppercase tracking-wider font-medium">Calendriers archivés</div>
+                  <div className="mt-1 text-xl font-bold text-[#163667]">{archivedCalendarsCount}</div>
                 </div>
-                <div className="bg-white border border-gray-200 rounded-xl px-6 py-3 shadow-sm flex flex-col items-center justify-center text-center">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">Privatisations totales</div>
-                  <div className="mt-1 text-2xl font-bold text-[#163667]">{totalPrivatisationsAll}</div>
+                <div className="bg-white border border-gray-200 rounded-lg px-5 py-3 shadow-sm flex flex-col items-center justify-center text-center hover:shadow-md transition-shadow duration-200">
+                  <div className="text-xs text-gray-600 uppercase tracking-wider font-medium">Privatisations totales</div>
+                  <div className="mt-1 text-xl font-bold text-[#163667]">{totalPrivatisationsAll}</div>
                 </div>
-                <div className="bg-white border border-gray-200 rounded-xl px-6 py-3 shadow-sm flex flex-col items-center justify-center text-center">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">Privat Restaurant</div>
-                  <div className="mt-1 text-2xl font-bold text-[#163667]">{totalPrivRestaurantAll}</div>
+                <div className="bg-white border border-gray-200 rounded-lg px-5 py-3 shadow-sm flex flex-col items-center justify-center text-center hover:shadow-md transition-shadow duration-200">
+                  <div className="text-xs text-gray-600 uppercase tracking-wider font-medium">Privat Restaurant</div>
+                  <div className="mt-1 text-xl font-bold text-[#163667]">{totalPrivRestaurantAll}</div>
                 </div>
-                <div className="bg-white border border-gray-200 rounded-xl px-6 py-3 shadow-sm flex flex-col items-center justify-center text-center">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">Privat Plage</div>
-                  <div className="mt-1 text-2xl font-bold text-[#163667]">{totalPrivPlageAll}</div>
+                <div className="bg-white border border-gray-200 rounded-lg px-5 py-3 shadow-sm flex flex-col items-center justify-center text-center hover:shadow-md transition-shadow duration-200">
+                  <div className="text-xs text-gray-600 uppercase tracking-wider font-medium">Privat Plage</div>
+                  <div className="mt-1 text-xl font-bold text-[#163667]">{totalPrivPlageAll}</div>
                 </div>
               </div>
             </div>
 
-            <div className="mb-8 px-4">
+            <div className="mb-6 px-4">
               <input
                 type="text"
                 placeholder="Rechercher un calendrier..."
-                className="w-full max-w-lg mx-auto block px-4 py-2 border border-gray-300 rounded-lg bg-white"
+                className="w-full max-w-lg mx-auto block px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#163667] transition-colors"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -1393,8 +1393,8 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
               </div>
             ) : (
               <div className="space-y-4 mb-8">
-                <p className="text-sm font-semibold text-gray-600">Calendriers actifs</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <p className="text-sm font-semibold text-gray-700">Calendriers actifs</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredActiveCalendars.map((c) => {
                     const createdAt = c.createdAt ? new Date(c.createdAt) : new Date(c.year, c.month || 0, 1);
                     const createdLabel = `Créé le: ${createdAt.toLocaleDateString('fr-FR')}`;
@@ -1404,37 +1404,37 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                     return (
                       <div
                         key={c.id}
-                        className="bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:scale-105"
+                        className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md hover:border-gray-300"
                       >
-                        <div className="p-6">
-                          <h3 className="text-2xl font-bold text-[#163667] truncate" title={c.title}>{c.title}</h3>
-                          <p className="text-sm text-gray-500 mt-1">{createdLabel}</p>
-                          <div className="mt-4 space-y-1 text-gray-700">
-                            <p className="text-sm"><strong>Privatisations :</strong> {privCount}</p>
+                        <div className="p-5">
+                          <h3 className="text-lg font-semibold text-[#163667] truncate" title={c.title}>{c.title}</h3>
+                          <p className="text-xs text-gray-500 mt-1.5">{createdLabel}</p>
+                          <div className="mt-3 space-y-0.5 text-gray-700">
+                            <p className="text-sm"><strong className="font-semibold">Privatisations :</strong> {privCount}</p>
                           </div>
                         </div>
-                        <div className="bg-gray-50 px-6 py-4 flex items-center justify-between">
+                        <div className="bg-gray-50 px-5 py-3 flex items-center justify-between border-t border-gray-200">
                           <button
                             type="button"
                             onClick={() => {
                               navigate(`/hotesse/${c.id}`);
                             }}
-                            className="bg-[#163667] text-white font-semibold py-2 px-4 rounded-lg hover:bg-opacity-90 transition-colors text-sm"
+                            className="bg-[#163667] text-white font-semibold py-1.5 px-3 rounded-lg hover:bg-[#0f2851] transition-colors text-xs"
                           >
                             Ouvrir
                           </button>
-                          <div className="flex items-center gap-3 text-sm">
+                          <div className="flex items-center gap-4 text-xs">
                             <button
                               type="button"
                               onClick={() => handleArchiveCalendar(c.id)}
-                              className="font-medium text-gray-600 hover:text-gray-900"
+                              className="font-medium text-gray-600 hover:text-[#163667] transition-colors"
                             >
                               Archiver
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteCalendar(c.id)}
-                              className="font-medium text-red-600 hover:text-red-800"
+                              className="font-medium text-red-600 hover:text-red-700 transition-colors"
                             >
                               Supprimer
                             </button>
@@ -1574,7 +1574,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   <button
                     type="button"
                     onClick={() => { setViewMode('weekly'); setWeekIndex(0); }}
-                    className={`px-3 py-2 text-sm ${viewMode === 'weekly' ? 'bg-[#163667] text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                    className={`px-3 py-2 text-xs font-medium transition-colors ${viewMode === 'weekly' ? 'bg-[#163667] text-white rounded-lg' : 'text-gray-700 hover:bg-gray-100 rounded'}`}
                   >
                     Hebdo
                   </button>
@@ -1584,16 +1584,16 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                     <button
                       type="button"
                       onClick={() => { setEditingPriv(null); setIsPrivModalOpen(true); setIsSettingsOpen(false); }}
-                      className="bg-[#163667] text-white font-semibold py-2 px-5 rounded-lg hover:bg-opacity-90"
+                      className="bg-[#163667] text-white font-semibold py-2 px-4 rounded-lg hover:bg-[#0f2851] transition-colors text-xs"
                     >
                       Ajouter une privatisation
                     </button>
                     <button
                       type="button"
                       onClick={handleOpenNotifModal}
-                      className="bg-[#163667] text-white font-semibold py-2 px-5 rounded-lg hover:bg-opacity-90 transition-colors text-sm"
+                      className="bg-white text-[#163667] font-semibold py-2 px-4 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors text-xs"
                     >
-                      Envoyer une notification de MAJ
+                      Envoyer une notification
                     </button>
                   </>
                 )}
@@ -2306,15 +2306,15 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
             onClick={() => setIsSettingsOpen(false)}
           >
             <div
-              className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-5"
+              className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-base font-semibold text-[#163667] mb-4">Paramètres des calendriers</h3>
+              <h3 className="text-lg font-semibold text-[#163667] mb-4">Paramètres des calendriers</h3>
               {/* Onglets */}
-              <div className="flex gap-2 border-b border-gray-200 mb-4">
+              <div className="flex gap-1 border-b border-gray-200 mb-6">
                 <button
                   onClick={() => setSettingsActiveTab('profil')}
-                  className={`px-4 py-2 font-semibold text-sm border-b-2 transition-colors ${
+                  className={`px-4 py-2.5 font-medium text-sm border-b-2 transition-colors ${
                     settingsActiveTab === 'profil'
                       ? 'border-[#163667] text-[#163667]'
                       : 'border-transparent text-gray-600 hover:text-[#163667]'
@@ -2324,7 +2324,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                 </button>
                 <button
                   onClick={() => setSettingsActiveTab('staff')}
-                  className={`px-4 py-2 font-semibold text-sm border-b-2 transition-colors ${
+                  className={`px-4 py-2.5 font-medium text-sm border-b-2 transition-colors ${
                     settingsActiveTab === 'staff'
                       ? 'border-[#163667] text-[#163667]'
                       : 'border-transparent text-gray-600 hover:text-[#163667]'
