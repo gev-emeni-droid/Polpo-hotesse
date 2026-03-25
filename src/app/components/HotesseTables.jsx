@@ -97,6 +97,9 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [privDocuments, setPrivDocuments] = useState([]);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
+  // State pour éditier une privatisation
+  const [editingPriv, setEditingPriv] = useState(null);
+
   // Ref pour le calcul différentiel du "Nombre d'hôtesses nécessaire"
   const prevHostessCountRef = useRef(0);
 
@@ -1110,6 +1113,8 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
 
   // Télécharger un document
   const handleDownloadDocument = async (docId, fileName) => {
+    if (!editingPriv || !editingPriv.id) return;
+
     try {
       const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/document?doc_id=${encodeURIComponent(docId)}`);
       if (!res.ok) {
@@ -1131,6 +1136,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
 
   // Supprimer un document
   const handleDeleteDocument = async (docId) => {
+    if (!editingPriv || !editingPriv.id) return;
     if (!window.confirm('Supprimer ce document ?')) return;
 
     try {
