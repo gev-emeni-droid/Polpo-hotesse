@@ -2403,88 +2403,89 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
               {/* Onglet Hôtesses & Commercial */}
               {settingsActiveTab === 'staff' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <h4 className="text-xs font-semibold text-gray-700 mb-2">Noms des hôtesses</h4>
-                  <form onSubmit={handleAddHostess} className="flex gap-2 mb-2">
-                    <input
-                      type="text"
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-                      value={newHostess}
-                      onChange={(e) => setNewHostess(e.target.value)}
-                      placeholder="Ajouter un nom d'hôtesse"
-                    />
-                    <button
-                      type="submit"
-                      className="bg-[#163667] text-white text-xs font-semibold py-2 px-3 rounded-lg hover:bg-opacity-90"
-                    >
-                      Ajouter
-                    </button>
-                  </form>
-                  <div className="flex flex-wrap gap-1">
-                    {hostessOptions.map((name) => (
-                      <span
-                        key={name}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs border border-gray-200"
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-700 mb-2">Noms des hôtesses</h4>
+                    <form onSubmit={handleAddHostess} className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                        value={newHostess}
+                        onChange={(e) => setNewHostess(e.target.value)}
+                        placeholder="Ajouter un nom d'hôtesse"
+                      />
+                      <button
+                        type="submit"
+                        className="bg-[#163667] text-white text-xs font-semibold py-2 px-3 rounded-lg hover:bg-opacity-90"
                       >
-                        {name}
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteHostess(name)}
-                          className="text-red-500 hover:text-red-700 font-bold px-1"
-                          title="Supprimer"
+                        Ajouter
+                      </button>
+                    </form>
+                    <div className="flex flex-wrap gap-1">
+                      {hostessOptions.map((name) => (
+                        <span
+                          key={name}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs border border-gray-200"
                         >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                    {hostessOptions.length === 0 && (
-                      <span className="text-xs text-gray-400">Aucune hôtesse définie pour le moment.</span>
-                    )}
+                          {name}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteHostess(name)}
+                            className="text-red-500 hover:text-red-700 font-bold px-1"
+                            title="Supprimer"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                      {hostessOptions.length === 0 && (
+                        <span className="text-xs text-gray-400">Aucune hôtesse définie pour le moment.</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="md:col-span-1">
-                  <h4 className="text-xs font-semibold text-gray-700 mb-2">Prise par</h4>
-                  <form onSubmit={handleAddPrisePar} className="flex gap-2 mb-2">
-                    <input
-                      type="text"
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-                      value={newPrisePar}
-                      onChange={(e) => setNewPrisePar(e.target.value)}
-                      placeholder="Ajouter un nom (prise par)"
-                    />
-                    <button
-                      type="submit"
-                      className="bg-[#163667] text-white text-xs font-semibold py-2 px-3 rounded-lg hover:bg-opacity-90"
-                    >
-                      Ajouter
-                    </button>
-                  </form>
-                  <div className="flex flex-wrap gap-1">
-                    {priseParOptions.map((name) => (
-                      <span
-                        key={name}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs border border-gray-200"
-                      >
-                        {name}
-                        <button
-                          type="button"
-                          onClick={() => handleDeletePrisePar(name)}
-                          className="text-red-500 hover:text-red-700 font-bold px-1"
-                          title="Supprimer"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                    {priseParOptions.length === 0 && (
-                      <span className="text-xs text-gray-400">Aucune option \"prise par\" pour le moment.</span>
-                    )}
-                  </div>
-                </div>
 
-                <div className="md:col-span-2 mt-4">
-                  <h4 className="text-xs font-semibold text-gray-700 mb-2">Contacts de notification</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 text-xs">
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-700 mb-2">Prise par</h4>
+                    <form onSubmit={handleAddPrisePar} className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                        value={newPrisePar}
+                        onChange={(e) => setNewPrisePar(e.target.value)}
+                        placeholder="Ajouter un nom (prise par)"
+                      />
+                      <button
+                        type="submit"
+                        className="bg-[#163667] text-white text-xs font-semibold py-2 px-3 rounded-lg hover:bg-opacity-90"
+                      >
+                        Ajouter
+                      </button>
+                    </form>
+                    <div className="flex flex-wrap gap-1">
+                      {priseParOptions.map((name) => (
+                        <span
+                          key={name}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs border border-gray-200"
+                        >
+                          {name}
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePrisePar(name)}
+                            className="text-red-500 hover:text-red-700 font-bold px-1"
+                            title="Supprimer"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                      {priseParOptions.length === 0 && (
+                        <span className="text-xs text-gray-400">Aucune option prise par pour le moment.</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2 mt-4">
+                    <h4 className="text-xs font-semibold text-gray-700 mb-2">Contacts de notification</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 text-xs">
                     <div className="md:col-span-1">
                       <input
                         type="text"
@@ -2562,8 +2563,9 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                         </div>
                       </div>
                     ))}
+                    </div>
                   </div>
-                </div>
+                  </div>
               )}
 
               <div className="flex justify-end gap-2 text-sm">
