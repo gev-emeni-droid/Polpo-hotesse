@@ -1,13 +1,13 @@
 import React from 'react';
 
-const Header = ({ title, onLogout }) => {
+const Header = ({ title, onLogout, customLogo }) => {
   return (
     <header className="bg-gray-50 px-4 pt-1 pb-2">
       <div className="flex items-start justify-between gap-4">
         <img
           className="h-20 md:h-24 lg:h-28 w-auto object-contain"
-          src="/UwFsj.jpg"
-          alt="L'IAMANI logo"
+          src={customLogo || "/UwFsj.jpg"}
+          alt="Logo"
         />
         <h1 
           className="flex-1 text-center text-xl md:text-2xl lg:text-3xl font-extrabold tracking-wide mt-2"

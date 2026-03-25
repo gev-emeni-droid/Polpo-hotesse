@@ -46,6 +46,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [hostessOptions, setHostessOptions] = useLocalStorage('hotesse_hostess_options_v1', []);
   const [priseParOptions, setPriseParOptions] = useLocalStorage('hotesse_prise_par_options_v1', []);
   const [notifContacts, setNotifContacts] = useLocalStorage('hotesse_notif_contacts_v1', []);
+  const [customLogo, setCustomLogo] = useLocalStorage('hotesse_custom_logo_v1', null);
 
   const firstActiveCalendarId = calendars.find(c => !c.isArchived)?.id || null;
   const [selectedCalendarId, setSelectedCalendarId] = useState(calendarId || firstActiveCalendarId);
@@ -562,6 +563,32 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     } catch (e) {
       console.error('Error updating calendar title', e);
     }
+  };
+
+  const handleUploadLogo = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Limiter la taille à 2MB
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Le fichier est trop volumineux (max 2MB)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const base64 = event.target?.result;
+        setCustomLogo(base64);
+      } catch (err) {
+        console.error('Error reading file', err);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    setCustomLogo(null);
   };
 
   const handleSendNotifications = () => {
@@ -1185,7 +1212,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title={headerTitle} onLogout={onLogout} />
+      <Header title={headerTitle} onLogout={onLogout} customLogo={customLogo} />
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {isFullPage && selectedCalendar && (
           <>
@@ -2421,6 +2448,54 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                       </div>
                     </div>
                   )}
+
+                  {/* Logo personnalisé */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-700 mb-2">Logo personnalisé</h4>
+                    <div className="flex flex-col gap-3">
+                      {customLogo && (
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={customLogo} 
+                            alt="Logo preview" 
+                            className="h-16 w-auto object-contain rounded border border-gray-200"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleRemoveLogo}
+                            className="text-xs font-semibold py-1.5 px-3 rounded-lg"
+                            style={{
+                              backgroundColor: '#dc2626',
+                              color: '#FFFFFF'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#991b1b'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = '#dc2626'}
+                          >
+                            Supprimer le logo
+                          </button>
+                        </div>
+                      )}
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleUploadLogo}
+                          className="hidden"
+                        />
+                        <span className="text-xs font-semibold py-1.5 px-3 rounded-lg inline-block"
+                          style={{
+                            backgroundColor: 'var(--color-primary)',
+                            color: 'var(--color-text-on-primary)'
+                          }}
+                          onMouseEnter={(e) => e.style.backgroundColor = 'var(--color-primary-dark)'}
+                          onMouseLeave={(e) => e.style.backgroundColor = 'var(--color-primary)'}
+                        >
+                          {customLogo ? 'Changer le logo' : 'Ajouter un logo'}
+                        </span>
+                      </label>
+                      <p className="text-xs text-gray-500">Max 2MB • PNG, JPG, GIF</p>
+                    </div>
+                  </div>
 
                   <div>
                     <h4 className="text-xs font-semibold text-gray-700 mb-3">Palette de couleurs</h4>
