@@ -2057,13 +2057,13 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         {/* Modal création calendrier */}
         {isCreateCalOpen && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-5">
-              <h3 className="text-base font-semibold text-[#163667] mb-3">Créer un Calendrier Privat</h3>
-              <form onSubmit={handleCreateCalendar} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+              <h3 className="text-lg font-semibold text-[#163667] mb-4">Créer un Calendrier Privat</h3>
+              <form onSubmit={handleCreateCalendar} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div>
-                  <label className="block text-xs text-gray-700 mb-1">Mois</label>
+                  <label className="block text-xs text-gray-700 mb-2 font-medium">Mois</label>
                   <select
-                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full"
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#163667]"
                     value={newMonth}
                     onChange={(e) => setNewMonth(e.target.value)}
                   >
@@ -2074,10 +2074,10 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-700 mb-1">Année</label>
+                  <label className="block text-xs text-gray-700 mb-2 font-medium">Année</label>
                   <input
                     type="number"
-                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full"
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#163667]"
                     value={newYear}
                     onChange={(e) => setNewYear(e.target.value)}
                   />
@@ -2087,14 +2087,14 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                 <button
                   type="button"
                   onClick={() => setIsCreateCalOpen(false)}
-                  className="px-3 py-2 rounded-lg border border-gray-300 text-gray-600"
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
                   onClick={handleCreateCalendar}
-                  className="px-3 py-2 rounded-lg bg-[#163667] text-white font-semibold hover:bg-opacity-90"
+                  className="px-4 py-2 rounded-lg bg-[#163667] text-white font-semibold hover:bg-[#0f2851] transition-colors"
                 >
                   Créer
                 </button>
@@ -2106,33 +2106,33 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         {/* Modal ajout privatisation */}
         {isPrivModalOpen && selectedCalendar && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-5">
-              <h3 className="text-base font-semibold text-[#163667] mb-3">{editingPriv ? 'Modifier la privatisation' : 'Ajouter une privatisation'}</h3>
-              <form onSubmit={handleAddPrivatisation} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+              <h3 className="text-lg font-semibold text-[#163667] mb-5">{editingPriv ? 'Modifier la privatisation' : 'Ajouter une privatisation'}</h3>
+              <form onSubmit={handleAddPrivatisation} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
-                  <label className="block text-xs text-gray-700 mb-1">Nom de la privat</label>
+                  <label className="block text-xs text-gray-700 mb-2 font-medium">Nom de la privat</label>
                   <input
                     type="text"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
                     value={privName}
                     onChange={(e) => setPrivName(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-700 mb-1">Nombre de personnes</label>
+                  <label className="block text-xs text-gray-700 mb-2 font-medium">Nombre de personnes</label>
                   <input
                     type="number"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
                     value={privPeople}
                     onChange={(e) => setPrivPeople(e.target.value)}
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-700 mb-1">Nombre d'hôtesses LBE</label>
+                  <label className="block text-xs text-gray-700 mb-2 font-medium">Nombre d'hôtesses LBE</label>
                   <input
                     type="number"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
                     min="0"
                     value={(() => {
                       const lbeEntry = privHostesses.find(h => /^\d+ LBE$/.test(h));
@@ -2150,15 +2150,15 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   />
                 </div>
                 <div className="md:col-span-1">
-                  <label className="block text-xs text-gray-700 mb-1">Hôtesses</label>
-                  <div className="border border-gray-300 rounded-lg px-3 py-2 text-xs bg-white max-h-28 overflow-auto space-y-1">
+                  <label className="block text-xs text-gray-700 mb-2 font-medium">Hôtesses</label>
+                  <div className="border border-gray-300 rounded-lg px-3 py-2 text-xs bg-white max-h-24 overflow-auto space-y-1.5">
                     {hostessOptions.length === 0 && (
-                      <div className="text-[11px] text-gray-400">Aucune hôtesse configurée dans les paramètres.</div>
+                      <div className="text-[11px] text-gray-400">Aucune hôtesse configurée.</div>
                     )}
                     {hostessOptions.map((name) => {
                       const checked = privHostesses.includes(name);
                       return (
-                        <label key={name} className="flex items-center gap-2 cursor-pointer">
+                        <label key={name} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
                           <input
                             type="checkbox"
                             className="h-3 w-3"
@@ -2171,16 +2171,16 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                               ));
                             }}
                           />
-                          <span>{name}</span>
+                          <span className="text-xs">{name}</span>
                         </label>
                       );
                     })}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-700 mb-1">Prise par</label>
+                  <label className="block text-xs text-gray-700 mb-2 font-medium">Prise par</label>
                   <select
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
                     value={privPrisePar}
                     onChange={(e) => setPrivPrisePar(e.target.value)}
                   >
@@ -2191,28 +2191,28 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-700 mb-1">Heure début</label>
+                  <label className="block text-xs text-gray-700 mb-2 font-medium">Heure début</label>
                   <input
                     type="time"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
                     value={privStart}
                     onChange={(e) => setPrivStart(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-700 mb-1">Heure fin</label>
+                  <label className="block text-xs text-gray-700 mb-2 font-medium">Heure fin</label>
                   <input
                     type="time"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
                     value={privEnd}
                     onChange={(e) => setPrivEnd(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-700 mb-1">Date</label>
+                  <label className="block text-xs text-gray-700 mb-2 font-medium">Date</label>
                   <input
                     type="date"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
                     value={privDate}
                     min={`${selectedCalendar.year}-${String(selectedCalendar.month + 1).padStart(2, '0')}-01`}
                     max={`${selectedCalendar.year}-${String(selectedCalendar.month + 1).padStart(2, '0')}-${String(getDaysInMonth(selectedCalendar.month, selectedCalendar.year).length).padStart(2, '0')}`}
@@ -2220,9 +2220,9 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-700 mb-1">Couleur</label>
+                  <label className="block text-xs text-gray-700 mb-2 font-medium">Couleur</label>
                   <div className="flex items-center gap-4 text-xs text-gray-700">
-                    <label className="inline-flex items-center gap-1">
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
                         name="priv-color"
@@ -2230,12 +2230,12 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                         checked={privColor === 'bleu'}
                         onChange={(e) => setPrivColor(e.target.value)}
                       />
-                      <span className="inline-flex items-center gap-1">
+                      <span className="flex items-center gap-1.5">
                         <span className="w-3 h-3 rounded-full bg-blue-500" />
-                        Bleu (restaurant)
+                        Bleu
                       </span>
                     </label>
-                    <label className="inline-flex items-center gap-1">
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
                         name="priv-color"
@@ -2243,39 +2243,36 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                         checked={privColor === 'violet'}
                         onChange={(e) => setPrivColor(e.target.value)}
                       />
-                      <span className="inline-flex items-center gap-1">
+                      <span className="flex items-center gap-1.5">
                         <span className="w-3 h-3 rounded-full bg-purple-500" />
-                        Violet (plage)
+                        Violet
                       </span>
                     </label>
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-xs text-gray-700 mb-1">Nombre d'hôtesses nécessaire</label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-700">Hôtesses :</span>
-                    <input
-                      type="number"
-                      min="0"
-                      className="w-20 border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white"
-                      value={privComment}
-                      onChange={(e) => setPrivComment(e.target.value)}
-                    />
-                  </div>
+                  <label className="block text-xs text-gray-700 mb-2 font-medium">Nombre d'hôtesses nécessaire</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                    value={privComment}
+                    onChange={(e) => setPrivComment(e.target.value)}
+                  />
                 </div>
-                <div className="md:col-span-2 flex justify-end gap-2 text-sm">
+                <div className="md:col-span-2 flex justify-end gap-2 text-sm pt-2 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={() => setIsPrivModalOpen(false)}
-                    className="px-3 py-2 rounded-lg border border-gray-300 text-gray-600"
+                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium transition-colors"
                   >
                     Annuler
                   </button>
                   <button
                     type="submit"
-                    className="bg-[#163667] text-white text-sm font-semibold py-2 px-5 rounded-lg hover:bg-opacity-90"
+                    className="bg-[#163667] text-white text-sm font-semibold py-2 px-5 rounded-lg hover:bg-[#0f2851] transition-colors"
                   >
-                    {editingPriv ? 'Modifier la privatisation' : 'Ajouter une privatisation'}
+                    {editingPriv ? 'Modifier' : 'Ajouter'}
                   </button>
                 </div>
               </form>
