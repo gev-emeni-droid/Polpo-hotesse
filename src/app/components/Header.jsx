@@ -6,8 +6,8 @@ const Header = ({ title, onLogout }) => {
       <div className="flex items-start justify-between gap-4">
         <img
           className="h-20 md:h-24 lg:h-28 w-auto object-contain"
-          src="/polpo-logo.png"
-          alt="Polpo Brasserie Seafood logo"
+          src="/UwFsj.jpg"
+          alt="L'IAMANI logo"
         />
         <h1 className="flex-1 text-center text-xl md:text-2xl lg:text-3xl font-extrabold tracking-wide text-[#163667] mt-2">
           {title}
