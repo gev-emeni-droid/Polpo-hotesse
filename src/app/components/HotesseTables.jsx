@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from './Header.jsx';
 import { useLocalStorage } from '../hooks/useLocalStorage.js';
+import { COLOR_PALETTES, applyTheme } from '../themes.js';
 
 const MONTHS = [
   'Janvier',
@@ -57,6 +58,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [viewMode, setViewMode] = useState('monthly'); // 'monthly' or 'weekly'
   const [weekIndex, setWeekIndex] = useState(0);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [selectedTheme, setSelectedTheme] = useState('navy');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -123,6 +125,25 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
 
   // Paramètres : préfixe du titre du calendrier sélectionné
   const [settingsTitlePrefix, setSettingsTitlePrefix] = useState('');
+
+  // Load and apply theme for selected calendar
+  useEffect(() => {
+    if (selectedCalendar && selectedCalendar.id) {
+      (async () => {
+        try {
+          const res = await fetch(`/api/hotesse/calendars/${encodeURIComponent(selectedCalendar.id)}/theme`);
+          const data = await res.json();
+          if (data.ok && data.theme_id) {
+            setSelectedTheme(data.theme_id);
+            const palette = COLOR_PALETTES.find(p => p.id === data.theme_id);
+            if (palette) {
+              applyTheme(palette);
+            }
+          }
+        } catch (_) {}
+      })();
+    }
+  }, [selectedCalendar?.id]);
 
   // Helper pour filtrer les privatisations selon les filtres couleur
   const filterPrivatisations = (privs) => {
@@ -422,6 +443,22 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         });
       } catch (e2) { }
     })();
+  };
+
+  const handleSaveTheme = async (themeId) => {
+    if (!selectedCalendar) return;
+    try {
+      await fetch(`/api/hotesse/calendars/${encodeURIComponent(selectedCalendar.id)}/theme`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ theme_id: themeId })
+      });
+      setSelectedTheme(themeId);
+      const palette = COLOR_PALETTES.find(p => p.id === themeId);
+      if (palette) {
+        applyTheme(palette);
+      }
+    } catch (_) {}
   };
 
   // Gestion des contacts de notification (Paramètres)
@@ -2379,6 +2416,40 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                     </div>
                   </div>
                 )}
+                <div className="md:col-span-2 mt-4">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-2">🎨 Palette de couleurs</h4>
+                  <select 
+                    value={selectedTheme} 
+                    onChange={(e) => handleSaveTheme(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                  >
+                    {/* Classical Palettes */}
+                    <optgroup label="Classique">
+                      {COLOR_PALETTES.filter(p => p.category === 'Classique').map(palette => (
+                        <option key={palette.id} value={palette.id}>{palette.name}</option>
+                      ))}
+                    </optgroup>
+                    {/* Pastel Palettes */}
+                    <optgroup label="Pastel">
+                      {COLOR_PALETTES.filter(p => p.category === 'Pastel').map(palette => (
+                        <option key={palette.id} value={palette.id}>{palette.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                  
+                  {/* Theme Preview */}
+                  {(() => {
+                    const palette = COLOR_PALETTES.find(p => p.id === selectedTheme);
+                    return palette ? (
+                      <div className="mt-2 flex gap-2">
+                        <div className="flex-1 p-2 rounded border text-xs text-white font-semibold text-center" style={{ backgroundColor: palette.primary }}>Primary</div>
+                        <div className="flex-1 p-2 rounded border text-xs font-semibold text-center" style={{ backgroundColor: palette.secondary, color: palette.primary }}>Secondary</div>
+                        <div className="flex-1 p-2 rounded border text-xs text-white font-semibold text-center" style={{ backgroundColor: palette.accent }}>Accent</div>
+                        <div className="flex-1 p-2 rounded border text-xs font-semibold text-center" style={{ backgroundColor: palette.background }}>BG</div>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
                 <div className="md:col-span-2 mt-4">
                   <h4 className="text-xs font-semibold text-gray-700 mb-2">Contacts de notification</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 text-xs">

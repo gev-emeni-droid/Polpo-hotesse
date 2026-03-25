@@ -73,4 +73,12 @@ export const ensureHotesseSchema = async (db) => {
       updated_at TEXT NOT NULL
     );
   `).run();
+
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS hotesse_theme_settings (
+      calendar_id TEXT PRIMARY KEY,
+      theme_id TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `).run();
 };
