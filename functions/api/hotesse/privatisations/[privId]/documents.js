@@ -1,3 +1,19 @@
+const ensureSchema = async (db) => {
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS hotesse_privatisations_documents (
+      id TEXT PRIMARY KEY,
+      priv_id TEXT NOT NULL,
+      file_name TEXT NOT NULL,
+      file_data TEXT NOT NULL,
+      mime_type TEXT NOT NULL DEFAULT 'application/octet-stream',
+      file_size INTEGER,
+      uploaded_at TEXT NOT NULL,
+      uploaded_by TEXT,
+      FOREIGN KEY (priv_id) REFERENCES hotesse_privatisations(id) ON DELETE CASCADE
+    );
+  `).run();
+};
+
 export async function onRequest(context) {
   const { request } = context;
   const url = new URL(request.url);
@@ -16,6 +32,12 @@ export async function onRequest(context) {
   }
 
   const db = context.env.DB;
+  
+  try {
+    await ensureSchema(db);
+  } catch (error) {
+    console.error('Error ensuring schema:', error);
+  }
 
   if (request.method === 'GET') {
     try {

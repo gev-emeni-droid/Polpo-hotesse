@@ -1,3 +1,19 @@
+const ensureSchema = async (db) => {
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS hotesse_privatisations_client_info (
+      priv_id TEXT PRIMARY KEY,
+      nom TEXT,
+      prenom TEXT,
+      mail TEXT,
+      telephone TEXT,
+      adresse_postale TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (priv_id) REFERENCES hotesse_privatisations(id) ON DELETE CASCADE
+    );
+  `).run();
+};
+
 export async function onRequest(context) {
   const { request } = context;
   const url = new URL(request.url);
@@ -15,6 +31,12 @@ export async function onRequest(context) {
   }
 
   const db = context.env.DB;
+  
+  try {
+    await ensureSchema(db);
+  } catch (error) {
+    console.error('Error ensuring schema:', error);
+  }
 
   if (request.method === 'GET') {
     try {
