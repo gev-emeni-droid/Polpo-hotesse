@@ -70,9 +70,17 @@ export const ensureHotesseSchema = async (db) => {
     CREATE TABLE IF NOT EXISTS hotesse_settings (
       id TEXT PRIMARY KEY,
       notif_contacts_json TEXT NOT NULL DEFAULT '[]',
+      custom_logo TEXT,
       updated_at TEXT NOT NULL
     );
   `).run();
+
+  // Ajout rétrocompatible de la colonne custom_logo si la table existe déjà
+  try {
+    await db.prepare('ALTER TABLE hotesse_settings ADD COLUMN custom_logo TEXT').run();
+  } catch (_) {
+    // Ignore l'erreur si la colonne existe déjà
+  }
 
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS hotesse_theme_settings (

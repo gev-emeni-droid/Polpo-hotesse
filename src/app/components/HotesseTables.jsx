@@ -46,7 +46,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [hostessOptions, setHostessOptions] = useLocalStorage('hotesse_hostess_options_v1', []);
   const [priseParOptions, setPriseParOptions] = useLocalStorage('hotesse_prise_par_options_v1', []);
   const [notifContacts, setNotifContacts] = useLocalStorage('hotesse_notif_contacts_v1', []);
-  const [customLogo, setCustomLogo] = useLocalStorage('hotesse_custom_logo_v1', null);
+  const [customLogo, setCustomLogo] = useState(null);
 
   const firstActiveCalendarId = calendars.find(c => !c.isArchived)?.id || null;
   const [selectedCalendarId, setSelectedCalendarId] = useState(calendarId || firstActiveCalendarId);
@@ -146,6 +146,23 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
       })();
     }
   }, [selectedCalendar?.id]);
+
+  // Load custom logo and other settings from DB on app startup
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/hotesse/settings');
+        const data = await res.json();
+        if (data.ok && data.settings) {
+          if (data.settings.custom_logo) {
+            setCustomLogo(data.settings.custom_logo);
+          }
+        }
+      } catch (e) {
+        console.error('Error loading settings:', e);
+      }
+    })();
+  }, []);
 
   // Helper pour filtrer les privatisations selon les filtres couleur
   const filterPrivatisations = (privs) => {
@@ -580,6 +597,8 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
       try {
         const base64 = event.target?.result;
         setCustomLogo(base64);
+        // Sauvegarder en BD
+        saveLogo(base64);
       } catch (err) {
         console.error('Error reading file', err);
       }
@@ -587,8 +606,42 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     reader.readAsDataURL(file);
   };
 
-  const handleRemoveLogo = () => {
+  const saveLogo = async (logoData) => {
+    try {
+      const res = await fetch('/api/hotesse/settings', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          notif_contacts: notifContacts,
+          custom_logo: logoData
+        })
+      });
+      if (!res.ok) {
+        console.error('Failed to save logo');
+      }
+    } catch (e) {
+      console.error('Error saving logo', e);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
     setCustomLogo(null);
+    // Supprimer en BD
+    try {
+      const res = await fetch('/api/hotesse/settings', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          notif_contacts: notifContacts,
+          custom_logo: null
+        })
+      });
+      if (!res.ok) {
+        console.error('Failed to remove logo');
+      }
+    } catch (e) {
+      console.error('Error removing logo', e);
+    }
   };
 
   const handleSendNotifications = () => {

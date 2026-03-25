@@ -102,6 +102,7 @@ CREATE TABLE hotesse_notif_contacts (
 CREATE TABLE hotesse_settings (
       id TEXT PRIMARY KEY,
       notif_contacts_json TEXT NOT NULL DEFAULT '[]',
+      custom_logo TEXT,
       updated_at TEXT NOT NULL
     );
 INSERT INTO "hotesse_settings" VALUES('global','[{"id":"contact_1763304012616","name":"Maëlle MINIAOU","email":"m.miniaou@groupe-bertrand.com","phone":"+33663520581"},{"id":"contact_1763304340966","name":"EMENI HESLOT","email":"polpo.managers@groupe-bertrand.com","phone":"+33744280362"}]','2025-11-17T09:54:39.474Z');
