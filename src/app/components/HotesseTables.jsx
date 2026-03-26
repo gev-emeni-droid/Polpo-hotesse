@@ -192,43 +192,44 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   // Paramètres : préfixe du titre du calendrier sélectionné
   const [settingsTitlePrefix, setSettingsTitlePrefix] = useState('');
 
-  // Load and apply theme for selected calendar
+  // Load default GLOBAL theme on app startup and maintain it
   useEffect(() => {
-    if (selectedCalendar && selectedCalendar.id) {
-      (async () => {
-        try {
-          const res = await fetch(`/api/hotesse/calendars/${encodeURIComponent(selectedCalendar.id)}/theme`);
-          const data = await res.json();
-          if (data.ok && data.theme_id) {
-            setSelectedTheme(data.theme_id);
-            const palette = COLOR_PALETTES.find(p => p.id === data.theme_id);
-            if (palette) {
-              applyTheme(palette);
-            }
-          }
-        } catch (_) {}
-      })();
-    }
-  }, [selectedCalendar?.id]);
-
-  // Load default theme on app startup
-  useEffect(() => {
-    (async () => {
+    const loadTheme = async () => {
       try {
+        // First try to load from localStorage (cache)
+        const cachedTheme = localStorage.getItem('selectedTheme');
+        if (cachedTheme) {
+          console.log('Loading theme from cache:', cachedTheme);
+          setSelectedTheme(cachedTheme);
+          const palette = COLOR_PALETTES.find(p => p.id === cachedTheme);
+          if (palette) {
+            applyTheme(palette);
+          }
+        }
+
+        // Then fetch latest from API
         const res = await fetch('/api/hotesse/theme');
         const data = await res.json();
         if (data.ok && data.theme_id) {
+          console.log('Loaded global theme:', data.theme_id);
           setSelectedTheme(data.theme_id);
           const palette = COLOR_PALETTES.find(p => p.id === data.theme_id);
           if (palette) {
             applyTheme(palette);
           }
         }
-      } catch (_) {
+      } catch (err) {
+        console.error('Error loading theme:', err);
       } finally {
         setThemeLoaded(true);
       }
-    })();
+    };
+
+    loadTheme();
+    
+    // Poll for theme changes every 5 seconds to stay in sync across tabs
+    const interval = setInterval(loadTheme, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   // Load custom logo and other settings from DB on app startup
@@ -1099,8 +1100,9 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         return;
       }
 
-      // Automatically create/update client record
+      // Automatically create/update client record AND entreprise record
       try {
+        // Create/update client (type = "client")
         const clientRes = await fetch('/api/hotesse/clients', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -1110,12 +1112,29 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
             telephone: clientTelephone,
             mail: clientMail,
             adresse_postale: clientAdresse,
-            entreprise: editingPriv.name || ''
+            entreprise: editingPriv.name || '',
+            type: 'client'
           })
         });
 
         if (!clientRes.ok) {
           console.error('Warning: Failed to sync client record:', clientRes.status);
+        }
+
+        // Create/update entreprise (type = "entreprise") 
+        if (editingPriv.name) {
+          const entrepriseRes = await fetch('/api/hotesse/clients', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              nom: editingPriv.name,
+              type: 'entreprise'
+            })
+          });
+
+          if (!entrepriseRes.ok) {
+            console.error('Warning: Failed to sync entreprise record:', entrepriseRes.status);
+          }
         }
       } catch (err) {
         console.error('Warning: Error syncing client record:', err);

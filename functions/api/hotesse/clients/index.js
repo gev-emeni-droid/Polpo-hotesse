@@ -8,6 +8,7 @@ const ensureSchema = async (db) => {
       mail TEXT,
       adresse_postale TEXT,
       entreprise TEXT,
+      type TEXT DEFAULT 'client',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -47,16 +48,27 @@ async function handleGet(db, searchParams) {
   try {
     const page = parseInt(searchParams.get('page')) || 1;
     const search = searchParams.get('search')?.toLowerCase() || '';
+    const typeFilter = searchParams.get('type') || ''; // '' = all, 'client', or 'entreprise'
     const limit = 30;
     const offset = (page - 1) * limit;
 
     let whereClause = '';
     let params = [];
 
+    // Build WHERE clause with search and type filter
+    let conditions = [];
     if (search) {
-      whereClause = `WHERE LOWER(prenom) LIKE ? OR LOWER(nom) LIKE ? OR LOWER(telephone) LIKE ? OR LOWER(mail) LIKE ? OR LOWER(entreprise) LIKE ?`;
+      conditions.push(`(LOWER(prenom) LIKE ? OR LOWER(nom) LIKE ? OR LOWER(telephone) LIKE ? OR LOWER(mail) LIKE ? OR LOWER(entreprise) LIKE ?)`);
       const searchTerm = `%${search}%`;
       params = [searchTerm, searchTerm, searchTerm, searchTerm, searchTerm];
+    }
+    if (typeFilter) {
+      conditions.push(`type = ?`);
+      params.push(typeFilter);
+    }
+
+    if (conditions.length > 0) {
+      whereClause = `WHERE ${conditions.join(' AND ')}`;
     }
 
     // Get total count
@@ -66,10 +78,10 @@ async function handleGet(db, searchParams) {
 
     // Get paginated results
     const query = `
-      SELECT id, prenom, nom, telephone, mail, adresse_postale, entreprise, created_at, updated_at
+      SELECT id, prenom, nom, telephone, mail, adresse_postale, entreprise, type, created_at, updated_at
       FROM hotesse_clients
       ${whereClause}
-      ORDER BY nom ASC, prenom ASC
+      ORDER BY type DESC, nom ASC, prenom ASC
       LIMIT ? OFFSET ?
     `;
     
@@ -98,9 +110,9 @@ async function handleGet(db, searchParams) {
 async function handlePost(db, request) {
   try {
     const body = await request.json();
-    const { prenom, nom, telephone, mail, adresse_postale, entreprise } = body;
+    const { prenom, nom, telephone, mail, adresse_postale, entreprise, type = 'client' } = body;
 
-    // nom is now required but prenom and telephone are optional
+    // nom is required
     if (!nom) {
       return new Response(JSON.stringify({ error: 'nom is required' }), {
         status: 400,
@@ -110,17 +122,27 @@ async function handlePost(db, request) {
 
     const now = new Date().toISOString();
 
-    // Check if exists - use only provided fields for matching
-    let existsQuery = `SELECT id FROM hotesse_clients WHERE nom = ?`;
-    let existsParams = [nom];
+    // Check if exists - detection logic depends on type
+    let existsQuery = '';
+    let existsParams = [];
     
-    if (prenom) {
-      existsQuery += ` AND prenom = ?`;
-      existsParams.push(prenom);
-    }
-    if (telephone) {
-      existsQuery += ` AND telephone = ?`;
-      existsParams.push(telephone);
+    if (type === 'entreprise') {
+      // For entreprise: only check by nom to avoid duplicates
+      existsQuery = `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'entreprise'`;
+      existsParams = [nom];
+    } else {
+      // For client: check by prenom + nom + telephone to keep different people separate
+      existsQuery = `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'client'`;
+      existsParams = [nom];
+      
+      if (prenom) {
+        existsQuery += ` AND prenom = ?`;
+        existsParams.push(prenom);
+      }
+      if (telephone) {
+        existsQuery += ` AND telephone = ?`;
+        existsParams.push(telephone);
+      }
     }
     
     const existing = await db.prepare(existsQuery).bind(...existsParams).first();
@@ -142,9 +164,9 @@ async function handlePost(db, request) {
       const id = crypto.randomUUID();
       await db.prepare(
         `INSERT INTO hotesse_clients 
-         (id, prenom, nom, telephone, mail, adresse_postale, entreprise, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).bind(id, prenom || null, nom, telephone || null, mail || null, adresse_postale || null, entreprise || null, now, now).run();
+         (id, prenom, nom, telephone, mail, adresse_postale, entreprise, type, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(id, prenom || null, nom, telephone || null, mail || null, adresse_postale || null, entreprise || null, type, now, now).run();
 
       return new Response(JSON.stringify({ success: true, id, action: 'created' }), {
         status: 201,

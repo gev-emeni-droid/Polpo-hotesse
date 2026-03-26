@@ -10,6 +10,7 @@ export default function ClientsPage() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState(''); // '' = all, 'client', 'entreprise'
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedClient, setSelectedClient] = useState(null);
@@ -68,7 +69,7 @@ export default function ClientsPage() {
   // Fetch clients list
   useEffect(() => {
     fetchClients(1);
-  }, [search]);
+  }, [search, typeFilter]);
 
   const fetchClients = async (pageNum) => {
     setLoading(true);
@@ -76,6 +77,7 @@ export default function ClientsPage() {
       const params = new URLSearchParams();
       params.append('page', pageNum);
       if (search) params.append('search', search);
+      if (typeFilter) params.append('type', typeFilter);
 
       const response = await fetch(`/api/hotesse/clients?${params}`);
       if (!response.ok) throw new Error('Failed to fetch clients');
@@ -303,6 +305,39 @@ export default function ClientsPage() {
         />
       </div>
 
+      <div className="mb-6 flex flex-wrap gap-3">
+        <button
+          onClick={() => { setTypeFilter(''); setPage(1); }}
+          style={{
+            backgroundColor: !typeFilter ? themeColor : '#e5e7eb',
+            color: !typeFilter ? 'white' : '#333'
+          }}
+          className="px-4 py-2 rounded font-medium transition-colors hover:opacity-90"
+        >
+          Tous
+        </button>
+        <button
+          onClick={() => { setTypeFilter('client'); setPage(1); }}
+          style={{
+            backgroundColor: typeFilter === 'client' ? themeColor : '#e5e7eb',
+            color: typeFilter === 'client' ? 'white' : '#333'
+          }}
+          className="px-4 py-2 rounded font-medium transition-colors hover:opacity-90"
+        >
+          Clients
+        </button>
+        <button
+          onClick={() => { setTypeFilter('entreprise'); setPage(1); }}
+          style={{
+            backgroundColor: typeFilter === 'entreprise' ? themeColor : '#e5e7eb',
+            color: typeFilter === 'entreprise' ? 'white' : '#333'
+          }}
+          className="px-4 py-2 rounded font-medium transition-colors hover:opacity-90"
+        >
+          Entreprises
+        </button>
+      </div>
+
       {loading ? (
         <p className="text-gray-500 text-center py-8">Chargement...</p>
       ) : clients.length === 0 ? (
@@ -318,17 +353,26 @@ export default function ClientsPage() {
                   <th className="px-4 py-3 text-left text-sm font-semibold text-white">Téléphone</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-white">Mail</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-white">Entreprise</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-white">Type</th>
                   <th className="px-4 py-3 text-center text-sm font-semibold text-white">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {clients.map((client) => (
                   <tr key={client.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-gray-800">{client.prenom}</td>
+                    <td className="px-4 py-3 text-sm text-gray-800">{client.prenom || '-'}</td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-800">{client.nom}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{client.telephone}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{client.telephone || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{client.mail || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{client.entreprise || '-'}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span 
+                        style={{ backgroundColor: `${themeColor}20`, color: themeColor }}
+                        className="px-3 py-1 rounded-full text-xs font-semibold"
+                      >
+                        {client.type === 'entreprise' ? '🏢 Entreprise' : '👤 Client'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-center">
                       <button
                         onClick={() => fetchClientDetails(client.id)}

@@ -142,6 +142,7 @@ export const ensureHotesseSchema = async (db) => {
       mail TEXT,
       adresse_postale TEXT,
       entreprise TEXT,
+      type TEXT DEFAULT 'client',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
