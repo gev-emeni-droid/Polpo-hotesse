@@ -155,4 +155,13 @@ export const ensureHotesseSchema = async (db) => {
       updated_at TEXT NOT NULL
     );
   `).run();
+
+  // Add type column retroactively if it doesn't exist
+  try {
+    await db.prepare('ALTER TABLE hotesse_clients ADD COLUMN type TEXT DEFAULT \'client\'').run();
+    console.log('Added type column to hotesse_clients');
+  } catch (e) {
+    // Column already exists, that's OK
+    console.log('type column already exists or migration skipped');
+  }
 };
