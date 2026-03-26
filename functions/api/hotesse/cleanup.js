@@ -41,7 +41,7 @@ export const onRequestPost = async ({ env, request }) => {
     if (action === 'full') {
       console.log('🧹 Step 5: Removing legacy tables...');
       
-      const oldTables = ['tables', 'table_params', 'rows'];
+      const oldTables = ['tables', 'table_params', 'rows', 'settings'];
       for (const table of oldTables) {
         try {
           await env.DB.prepare(`DROP TABLE IF EXISTS ${table}`).run();
