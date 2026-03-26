@@ -84,6 +84,58 @@ export async function onRequest(context) {
         ).bind(privId, nom, prenom, mail, telephone, adresse_postale, now, now).run();
       }
 
+      // Automatically create/update clients in hotesse_clients table
+      try {
+        // Get privatisation name for entreprise client
+        const privData = await db.prepare(
+          `SELECT name FROM hotesse_privatisations WHERE id = ?`
+        ).bind(privId).first();
+        const privName = privData?.name;
+
+        // Create/update client (type = "client") with personal info
+        if (nom) {
+          const clientId = `client_${prenom || ''}_${nom}_${telephone || ''}`.replace(/\s+/g, '_').toLowerCase();
+          const existingClient = await db.prepare(
+            `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'client'`
+          ).bind(nom).first();
+
+          if (existingClient) {
+            // Update
+            await db.prepare(
+              `UPDATE hotesse_clients 
+               SET prenom = ?, telephone = ?, mail = ?, adresse_postale = ?, entreprise = ?, updated_at = ?
+               WHERE id = ?`
+            ).bind(prenom || null, telephone || null, mail || null, adresse_postale || null, privName || null, now, existingClient.id).run();
+          } else {
+            // Create
+            const newClientId = `client_${crypto.randomUUID()}`;
+            await db.prepare(
+              `INSERT INTO hotesse_clients 
+               (id, prenom, nom, telephone, mail, adresse_postale, entreprise, type, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'client', ?, ?)`
+            ).bind(newClientId, prenom || null, nom, telephone || null, mail || null, adresse_postale || null, privName || null, now, now).run();
+          }
+        }
+
+        // Create/update entreprise client from privatisation name
+        if (privName) {
+          const existingEntreprise = await db.prepare(
+            `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'entreprise'`
+          ).bind(privName).first();
+
+          if (!existingEntreprise) {
+            const entrepriseId = `client_${crypto.randomUUID()}`;
+            await db.prepare(
+              `INSERT INTO hotesse_clients 
+               (id, nom, entreprise, type, created_at, updated_at)
+               VALUES (?, ?, ?, 'entreprise', ?, ?)`
+            ).bind(entrepriseId, privName, privName, now, now).run();
+          }
+        }
+      } catch (clientErr) {
+        console.error('Warning: Failed to auto-create clients:', clientErr);
+      }
+
       return new Response(JSON.stringify({ success: true, priv_id: privId }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
