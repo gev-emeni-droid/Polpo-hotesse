@@ -47,37 +47,36 @@ export async function onRequest(context) {
 async function handleGet(db, searchParams) {
   try {
     const page = parseInt(searchParams.get('page')) || 1;
-    const search = searchParams.get('search')?.toLowerCase() || '';
-    const typeFilter = searchParams.get('type') || ''; // '' = all, 'client', or 'entreprise'
+    const search = searchParams.get('search') || '';
+    const typeFilter = searchParams.get('type') || '';
     const limit = 30;
     const offset = (page - 1) * limit;
 
-    let whereClause = '';
+    let whereConditions = [];
     let params = [];
 
-    // Build WHERE clause with search and type filter
-    let conditions = [];
-    if (search) {
-      // 5 searchable fields: prenom, nom, telephone, mail, entreprise
-      conditions.push(`(LOWER(prenom) LIKE ? OR LOWER(nom) LIKE ? OR LOWER(telephone) LIKE ? OR LOWER(mail) LIKE ? OR LOWER(entreprise) LIKE ?)`);
-      const searchTerm = `%${search}%`;
-      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
-    }
+    // Add type filter if present
     if (typeFilter) {
-      conditions.push(`type = ?`);
+      whereConditions.push('type = ?');
       params.push(typeFilter);
     }
 
-    if (conditions.length > 0) {
-      whereClause = `WHERE ${conditions.join(' AND ')}`;
+    // Add search filter if present
+    if (search) {
+      const searchTerm = `%${search}%`;
+      whereConditions.push('(prenom LIKE ? OR nom LIKE ? OR telephone LIKE ? OR mail LIKE ? OR entreprise LIKE ?)');
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
     // Get total count
     const countQuery = `SELECT COUNT(*) as count FROM hotesse_clients ${whereClause}`;
-    const countResult = await db.prepare(countQuery).bind(...params).first();
+    const countStmt = db.prepare(countQuery);
+    const countResult = await countStmt.bind(...params).first();
     const total = countResult?.count || 0;
 
-    // Get paginated results - prepare with all params including limit and offset
+    // Get paginated results
     const allParams = [...params, limit, offset];
     const query = `
       SELECT id, prenom, nom, telephone, mail, adresse_postale, entreprise, type, created_at, updated_at
@@ -87,7 +86,8 @@ async function handleGet(db, searchParams) {
       LIMIT ? OFFSET ?
     `;
     
-    const result = await db.prepare(query).bind(...allParams).all();
+    const stmt = db.prepare(query);
+    const result = await stmt.bind(...allParams).all();
     const clients = result.results || [];
 
     return new Response(JSON.stringify({
@@ -101,8 +101,8 @@ async function handleGet(db, searchParams) {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    console.error('Error fetching clients:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Error fetching clients:', error.message, error);
+    return new Response(JSON.stringify({ error: error.message, details: error.toString() }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
