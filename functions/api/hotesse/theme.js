@@ -3,101 +3,21 @@ import { ensureHotesseSchema } from './schema.js';
 export const onRequestGet = async ({ env }) => {
   try {
     await ensureHotesseSchema(env.DB);
-    
-    // Ensure theme settings table exists
-    await env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS hotesse_theme_settings (
-        calendar_id TEXT PRIMARY KEY,
-        theme_id TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-    `).run();
-    
-    // Clean up old/invalid theme data - remove themes with invalid IDs or orphaned entries
-    const validThemeIds = [
-      'sage-stone', 'cream-teal', 'deep-navy', 'teal-bright', 'sunny-gold',
-      'lavender-gray', 'seafoam-blue', 'deep-mystery', 'sage-warm', 'rose-earth',
-      'coral-rose', 'cream-soft', 'teal-stone', 'rose-navy', 'teal-green',
-      'gray-lavender', 'earth-warm', 'mauve-taupe', 'coral-deep', 'rose-burgundy',
-      'blush-soft', 'sage-soft', 'teal-combo', 'gold-accent'
-    ];
-    const placeholders = validThemeIds.map(() => '?').join(',');
-    await env.DB.prepare(
-      `DELETE FROM hotesse_theme_settings WHERE theme_id NOT IN (${placeholders})`
-    ).bind(...validThemeIds).run();
-    
-    // Remove orphaned entries for archived calendars
-    await env.DB.prepare(
-      `DELETE FROM hotesse_theme_settings WHERE calendar_id NOT IN (SELECT id FROM hotesse_calendars WHERE is_archived = 0)`
-    ).run();
-    
-    // Get ALL themes for all ACTIVE calendars
-    const themes = await env.DB.prepare(
-      `SELECT ts.calendar_id, ts.theme_id, ts.updated_at, hc.created_at
-       FROM hotesse_theme_settings ts
-       JOIN hotesse_calendars hc ON ts.calendar_id = hc.id
-       WHERE hc.is_archived = 0
-       ORDER BY ts.updated_at DESC
-       LIMIT 10`
-    ).all();
-    
-    console.log('Found themes:', themes.results?.length, 'results');
-    if (themes.results && themes.results.length > 0) {
-      const first = themes.results[0];
-      console.log(`Returning most recent theme: ${first.theme_id} for calendar ${first.calendar_id}, updated: ${first.updated_at}`);
-      return new Response(
-        JSON.stringify({ ok: true, theme_id: first.theme_id, source: 'calendar', calendar_id: first.calendar_id }),
-        {
-          headers: {
-            'content-type': 'application/json',
-            'cache-control': 'no-cache, no-store, must-revalidate',
-            'pragma': 'no-cache',
-            'expires': '0',
-            'access-control-allow-origin': '*',
-          },
-        }
-      );
-    }
-    
-    // If no theme settings found, try to get any theme from any active calendar
-    const calendars = await env.DB.prepare(
-      `SELECT id FROM hotesse_calendars WHERE is_archived = 0 ORDER BY created_at DESC LIMIT 1`
+
+    // Fetch GLOBAL theme from settings
+    const result = await env.DB.prepare(
+      `SELECT theme_id FROM hotesse_settings WHERE id = 'global'`
     ).first();
-    
-    if (calendars?.id) {
-      const theme = await env.DB.prepare(
-        'SELECT theme_id FROM hotesse_theme_settings WHERE calendar_id = ?'
-      ).bind(calendars.id).first();
-      
-      if (theme?.theme_id) {
-        console.log(`Found theme via fallback: ${theme.theme_id}`);
-        return new Response(
-          JSON.stringify({ ok: true, theme_id: theme.theme_id, source: 'fallback' }),
-          {
-            headers: {
-              'content-type': 'application/json',
-              'cache-control': 'no-cache, no-store, must-revalidate',
-              'access-control-allow-origin': '*',
-            },
-          }
-        );
-      }
-    }
-    
-    // Default to deep-navy if no theme found
-    console.log('No theme found anywhere, returning default deep-navy');
-    return new Response(
-      JSON.stringify({ ok: true, theme_id: 'deep-navy', source: 'default' }),
-      {
-        headers: {
-          'content-type': 'application/json',
-          'cache-control': 'no-cache, no-store, must-revalidate',
-          'pragma': 'no-cache',
-          'expires': '0',
-          'access-control-allow-origin': '*',
-        },
-      }
-    );
+
+    const themeId = result?.theme_id || 'sage-stone';
+
+    return new Response(JSON.stringify({ ok: true, theme_id: themeId }), {
+      headers: {
+        'content-type': 'application/json',
+        'cache-control': 'no-store',
+        'access-control-allow-origin': '*',
+      },
+    });
   } catch (e) {
     console.error('Theme endpoint error:', e.message, e.stack);
     return new Response(
@@ -105,4 +25,58 @@ export const onRequestGet = async ({ env }) => {
       { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-cache, no-store, must-revalidate', 'access-control-allow-origin': '*' } }
     );
   }
+};
+
+export const onRequestPut = async ({ env, request }) => {
+  try {
+    await ensureHotesseSchema(env.DB);
+
+    const body = await request.json().catch(() => ({}));
+    const themeId = body.theme_id || 'sage-stone';
+    const now = new Date().toISOString();
+
+    // Upsert GLOBAL theme in settings
+    await env.DB.prepare(
+      `INSERT INTO hotesse_settings (id, theme_id, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         theme_id = excluded.theme_id,
+         updated_at = excluded.updated_at`
+    )
+      .bind('global', themeId, now)
+      .run();
+
+    return new Response(JSON.stringify({ ok: true, theme_id: themeId }), {
+      headers: {
+        'content-type': 'application/json',
+        'cache-control': 'no-store',
+        'access-control-allow-origin': '*',
+        'access-control-allow-methods': 'GET, PUT, OPTIONS',
+        'access-control-allow-headers': 'content-type',
+      },
+    });
+  } catch (e) {
+    console.error('Theme PUT error:', e.message);
+    return new Response(
+      JSON.stringify({ ok: false, error: e.message || 'error' }),
+      {
+        status: 500,
+        headers: {
+          'content-type': 'application/json',
+          'access-control-allow-origin': '*',
+        },
+      }
+    );
+  }
+};
+
+export const onRequestOptions = async () => {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'GET, PUT, OPTIONS',
+      'access-control-allow-headers': 'content-type',
+    },
+  });
 };

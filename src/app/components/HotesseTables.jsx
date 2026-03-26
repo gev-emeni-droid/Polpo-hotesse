@@ -549,13 +549,9 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   };
 
   const handleSaveTheme = async (themeId) => {
-    if (!selectedCalendar) {
-      console.warn('No calendar selected, cannot save theme');
-      return;
-    }
     try {
-      console.log('Saving theme:', themeId, 'for calendar:', selectedCalendar.id);
-      const response = await fetch(`/api/hotesse/calendars/${encodeURIComponent(selectedCalendar.id)}/theme`, {
+      console.log('Saving GLOBAL theme:', themeId);
+      const response = await fetch(`/api/hotesse/theme`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ theme_id: themeId })
