@@ -192,12 +192,12 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   // Paramètres : préfixe du titre du calendrier sélectionné
   const [settingsTitlePrefix, setSettingsTitlePrefix] = useState('');
 
-  // Load default GLOBAL theme on app startup and maintain it
-  // IMPORTANT: Load directly from API (no localStorage) so all users see same color in real-time
+  // Load GLOBAL theme on app startup
+  // Load directly from API (no localStorage) so all users see same color
   useEffect(() => {
     const loadTheme = async () => {
       try {
-        // Fetch ONLY from API - no localStorage cache
+        // Fetch ONLY from API - no localStorage cache, no polling
         const res = await fetch('/api/hotesse/theme');
         const data = await res.json();
         if (data.ok && data.theme_id) {
@@ -216,10 +216,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     };
 
     loadTheme();
-    
-    // Poll for theme changes every 5 seconds to stay in sync across all users
-    const interval = setInterval(loadTheme, 5000);
-    return () => clearInterval(interval);
+    // No polling - theme loaded once on startup
   }, []);
 
   // Load custom logo and other settings from DB on app startup

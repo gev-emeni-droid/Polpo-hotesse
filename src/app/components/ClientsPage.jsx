@@ -22,11 +22,11 @@ export default function ClientsPage() {
     : '#999999';
 
   // Load theme from API on mount
-  // IMPORTANT: Load directly from API (no localStorage) so all users see same color in real-time
+  // Load directly from API (no localStorage) so all users see same color
   useEffect(() => {
     const loadTheme = async () => {
       try {
-        // Fetch ONLY from API - no localStorage cache
+        // Fetch ONLY from API - no localStorage cache, no polling
         const res = await fetch('/api/hotesse/theme');
         const data = await res.json();
         console.log('ClientsPage theme API response:', data);
@@ -50,10 +50,7 @@ export default function ClientsPage() {
     };
 
     loadTheme();
-
-    // Poll for theme changes every 5 seconds to stay in sync across all users
-    const interval = setInterval(loadTheme, 5000);
-    return () => clearInterval(interval);
+    // No polling - theme loaded once on mount
   }, []);
 
   // Fetch clients list

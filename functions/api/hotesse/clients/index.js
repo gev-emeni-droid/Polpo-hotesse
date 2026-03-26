@@ -58,7 +58,8 @@ async function handleGet(db, searchParams) {
     // Build WHERE clause with search and type filter
     let conditions = [];
     if (search) {
-      conditions.push(`(nom LIKE ? OR LOWER(nom) LIKE ? OR telephone LIKE ? OR mail LIKE ? OR entreprise LIKE ?)`);
+      // 5 searchable fields: prenom, nom, telephone, mail, entreprise
+      conditions.push(`(LOWER(prenom) LIKE ? OR LOWER(nom) LIKE ? OR LOWER(telephone) LIKE ? OR LOWER(mail) LIKE ? OR LOWER(entreprise) LIKE ?)`);
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     }
