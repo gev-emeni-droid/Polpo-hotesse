@@ -17,13 +17,25 @@ export default function ClientsPage() {
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   const themeColor = themeLoaded && selectedTheme 
-    ? (COLOR_PALETTES.find(p => p.id === selectedTheme)?.primary || '#ccc') 
-    : '#ccc';
+    ? (COLOR_PALETTES.find(p => p.id === selectedTheme)?.primary || '#999999') 
+    : '#999999';
 
   // Load theme from API on mount
   useEffect(() => {
     const loadTheme = async () => {
       try {
+        // First try to load from localStorage (cache)
+        const cachedTheme = localStorage.getItem('selectedTheme');
+        if (cachedTheme) {
+          console.log('Loading theme from cache:', cachedTheme);
+          setSelectedTheme(cachedTheme);
+          const palette = COLOR_PALETTES.find(p => p.id === cachedTheme);
+          if (palette) {
+            applyTheme(palette);
+          }
+        }
+
+        // Then fetch latest from API
         const res = await fetch('/api/hotesse/theme');
         const data = await res.json();
         console.log('ClientsPage theme API response:', data);
