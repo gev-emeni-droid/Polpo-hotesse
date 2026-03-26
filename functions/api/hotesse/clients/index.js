@@ -2,15 +2,14 @@ const ensureSchema = async (db) => {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS hotesse_clients (
       id TEXT PRIMARY KEY,
-      prenom TEXT NOT NULL,
+      prenom TEXT,
       nom TEXT NOT NULL,
-      telephone TEXT NOT NULL,
+      telephone TEXT,
       mail TEXT,
       adresse_postale TEXT,
       entreprise TEXT,
       created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      UNIQUE(prenom, nom, telephone)
+      updated_at TEXT NOT NULL
     );
   `).run();
 };
@@ -101,8 +100,9 @@ async function handlePost(db, request) {
     const body = await request.json();
     const { prenom, nom, telephone, mail, adresse_postale, entreprise } = body;
 
-    if (!prenom || !nom || !telephone) {
-      return new Response(JSON.stringify({ error: 'prenom, nom, and telephone are required' }), {
+    // nom is now required but prenom and telephone are optional
+    if (!nom) {
+      return new Response(JSON.stringify({ error: 'nom is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -110,10 +110,20 @@ async function handlePost(db, request) {
 
     const now = new Date().toISOString();
 
-    // Check if exists
-    const existing = await db.prepare(
-      `SELECT id FROM hotesse_clients WHERE prenom = ? AND nom = ? AND telephone = ?`
-    ).bind(prenom, nom, telephone).first();
+    // Check if exists - use only provided fields for matching
+    let existsQuery = `SELECT id FROM hotesse_clients WHERE nom = ?`;
+    let existsParams = [nom];
+    
+    if (prenom) {
+      existsQuery += ` AND prenom = ?`;
+      existsParams.push(prenom);
+    }
+    if (telephone) {
+      existsQuery += ` AND telephone = ?`;
+      existsParams.push(telephone);
+    }
+    
+    const existing = await db.prepare(existsQuery).bind(...existsParams).first();
 
     if (existing) {
       // Update
@@ -121,7 +131,7 @@ async function handlePost(db, request) {
         `UPDATE hotesse_clients 
          SET mail = ?, adresse_postale = ?, entreprise = ?, updated_at = ?
          WHERE id = ?`
-      ).bind(mail, adresse_postale, entreprise, now, existing.id).run();
+      ).bind(mail || null, adresse_postale || null, entreprise || null, now, existing.id).run();
 
       return new Response(JSON.stringify({ success: true, id: existing.id, action: 'updated' }), {
         status: 200,
@@ -134,7 +144,7 @@ async function handlePost(db, request) {
         `INSERT INTO hotesse_clients 
          (id, prenom, nom, telephone, mail, adresse_postale, entreprise, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).bind(id, prenom, nom, telephone, mail, adresse_postale, entreprise, now, now).run();
+      ).bind(id, prenom || null, nom, telephone || null, mail || null, adresse_postale || null, entreprise || null, now, now).run();
 
       return new Response(JSON.stringify({ success: true, id, action: 'created' }), {
         status: 201,

@@ -70,11 +70,35 @@ export const onRequestPost = async ({ env, request }) => {
       .run();
     if (Array.isArray(hostesses)) {
       for (const h of hostesses) {
-        const name = String(h || '').trim();
-        if (!name) continue;
+        const hostessName = String(h || '').trim();
+        if (!hostessName) continue;
         await env.DB.prepare(
           'INSERT INTO hotesse_privatisations_hostesses (priv_id, hostess_name) VALUES (?, ?)'
-        ).bind(privId, name).run();
+        ).bind(privId, hostessName).run();
+      }
+    }
+
+    // Automatically create client from privatisation name (without phone to avoid duplicates)
+    if (name) {
+      try {
+        const now = new Date().toISOString();
+        const clientId = `client_${crypto.randomUUID()}`;
+        
+        // Check if client with this nom exists (without requiring phone)
+        const existingClient = await env.DB.prepare(
+          'SELECT id FROM hotesse_clients WHERE nom = ?'
+        ).bind(name).first();
+        
+        if (!existingClient) {
+          // Insert new client
+          await env.DB.prepare(
+            `INSERT INTO hotesse_clients 
+             (id, nom, entreprise, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?)`
+          ).bind(clientId, name, name, now, now).run();
+        }
+      } catch (err) {
+        console.error('Warning: Failed to create client from privatisation:', err);
       }
     }
 
