@@ -1,4 +1,4 @@
-name = "evenement-worker"
+name = "polpo-hotesse-worker"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
 
@@ -6,8 +6,8 @@ account_id = "a765efd32045142f11db525bac5c136e"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "evenement-test"
-database_id = "e43ca145-7560-47c1-a011-930928ce1740"
+database_name = "polpo-hotesse-db"
+database_id = "f0393625-4e82-4ea7-9bc3-94f5af444a65"
 
 [ai]
 binding = "AI"
