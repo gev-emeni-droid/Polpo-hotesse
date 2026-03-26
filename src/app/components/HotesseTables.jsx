@@ -193,25 +193,15 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [settingsTitlePrefix, setSettingsTitlePrefix] = useState('');
 
   // Load default GLOBAL theme on app startup and maintain it
+  // IMPORTANT: Load directly from API (no localStorage) so all users see same color in real-time
   useEffect(() => {
     const loadTheme = async () => {
       try {
-        // First try to load from localStorage (cache)
-        const cachedTheme = localStorage.getItem('selectedTheme');
-        if (cachedTheme) {
-          console.log('Loading theme from cache:', cachedTheme);
-          setSelectedTheme(cachedTheme);
-          const palette = COLOR_PALETTES.find(p => p.id === cachedTheme);
-          if (palette) {
-            applyTheme(palette);
-          }
-        }
-
-        // Then fetch latest from API
+        // Fetch ONLY from API - no localStorage cache
         const res = await fetch('/api/hotesse/theme');
         const data = await res.json();
         if (data.ok && data.theme_id) {
-          console.log('Loaded global theme:', data.theme_id);
+          console.log('Loaded global theme from API:', data.theme_id);
           setSelectedTheme(data.theme_id);
           const palette = COLOR_PALETTES.find(p => p.id === data.theme_id);
           if (palette) {
@@ -227,7 +217,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
 
     loadTheme();
     
-    // Poll for theme changes every 5 seconds to stay in sync across tabs
+    // Poll for theme changes every 5 seconds to stay in sync across all users
     const interval = setInterval(loadTheme, 5000);
     return () => clearInterval(interval);
   }, []);
