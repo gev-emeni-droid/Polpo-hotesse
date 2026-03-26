@@ -46,63 +46,35 @@ export async function onRequest(context) {
 
 async function handleGet(db, searchParams) {
   try {
-    const page = parseInt(searchParams.get('page')) || 1;
-    const search = searchParams.get('search') || '';
-    const typeFilter = searchParams.get('type') || '';
-    const limit = 30;
-    const offset = (page - 1) * limit;
-
-    let whereConditions = [];
-    let params = [];
-
-    // Add type filter if present
-    if (typeFilter) {
-      whereConditions.push('type = ?');
-      params.push(typeFilter);
-    }
-
-    // Add search filter if present
-    if (search) {
-      const searchTerm = `%${search}%`;
-      whereConditions.push('(prenom LIKE ? OR nom LIKE ? OR telephone LIKE ? OR mail LIKE ? OR entreprise LIKE ?)');
-      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
-    }
-
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-
-    // Get total count
-    const countQuery = `SELECT COUNT(*) as count FROM hotesse_clients ${whereClause}`;
-    const countStmt = db.prepare(countQuery);
-    const countResult = await countStmt.bind(...params).first();
-    const total = countResult?.count || 0;
-
-    // Get paginated results
-    const allParams = [...params, limit, offset];
-    const query = `
+    // Simple: just return all clients, no complex params
+    const result = await db.prepare(`
       SELECT id, prenom, nom, telephone, mail, adresse_postale, entreprise, type, created_at, updated_at
       FROM hotesse_clients
-      ${whereClause}
       ORDER BY type DESC, nom ASC, prenom ASC
-      LIMIT ? OFFSET ?
-    `;
-    
-    const stmt = db.prepare(query);
-    const result = await stmt.bind(...allParams).all();
+    `).all();
+
     const clients = result.results || [];
+    const total = clients.length;
+    const page = 1;
+    const pageSize = 30;
+    const totalPages = Math.ceil(total / pageSize);
 
     return new Response(JSON.stringify({
       clients,
       total,
       page,
-      pageSize: limit,
-      totalPages: Math.ceil(total / limit)
+      pageSize,
+      totalPages
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    console.error('Error fetching clients:', error.message, error);
-    return new Response(JSON.stringify({ error: error.message, details: error.toString() }), {
+    console.error('handleGet error:', error.message, error);
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: error.toString()
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
