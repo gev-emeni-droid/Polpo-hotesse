@@ -58,9 +58,9 @@ async function handleGet(db, searchParams) {
     // Build WHERE clause with search and type filter
     let conditions = [];
     if (search) {
-      conditions.push(`(LOWER(prenom) LIKE ? OR LOWER(nom) LIKE ? OR LOWER(telephone) LIKE ? OR LOWER(mail) LIKE ? OR LOWER(entreprise) LIKE ?)`);
+      conditions.push(`(nom LIKE ? OR LOWER(nom) LIKE ? OR telephone LIKE ? OR mail LIKE ? OR entreprise LIKE ?)`);
       const searchTerm = `%${search}%`;
-      params = [searchTerm, searchTerm, searchTerm, searchTerm, searchTerm];
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     }
     if (typeFilter) {
       conditions.push(`type = ?`);
@@ -76,7 +76,8 @@ async function handleGet(db, searchParams) {
     const countResult = await db.prepare(countQuery).bind(...params).first();
     const total = countResult?.count || 0;
 
-    // Get paginated results
+    // Get paginated results - prepare with all params including limit and offset
+    const allParams = [...params, limit, offset];
     const query = `
       SELECT id, prenom, nom, telephone, mail, adresse_postale, entreprise, type, created_at, updated_at
       FROM hotesse_clients
@@ -85,7 +86,7 @@ async function handleGet(db, searchParams) {
       LIMIT ? OFFSET ?
     `;
     
-    const result = await db.prepare(query).bind(...params, limit, offset).all();
+    const result = await db.prepare(query).bind(...allParams).all();
     const clients = result.results || [];
 
     return new Response(JSON.stringify({

@@ -76,12 +76,20 @@ export const ensureHotesseSchema = async (db) => {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS hotesse_settings (
       id TEXT PRIMARY KEY,
+      theme_id TEXT DEFAULT 'sage-stone',
       notif_contacts_json TEXT NOT NULL DEFAULT '[]',
       custom_logo TEXT,
       sender_email TEXT DEFAULT 'notifications@l-iamani.com',
       updated_at TEXT NOT NULL
     );
   `).run();
+
+  // Ajout rétrocompatible de la colonne theme_id si la table existe déjà
+  try {
+    await db.prepare('ALTER TABLE hotesse_settings ADD COLUMN theme_id TEXT DEFAULT \'sage-stone\'').run();
+  } catch (_) {
+    // Ignore l'erreur si la colonne existe déjà
+  }
 
   // Ajout rétrocompatible de la colonne custom_logo si la table existe déjà
   try {
