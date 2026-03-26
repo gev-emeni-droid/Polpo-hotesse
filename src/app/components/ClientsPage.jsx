@@ -265,7 +265,16 @@ export default function ClientsPage() {
       {themeLoaded && (
       <>
       <div className="mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <h1 className="text-4xl font-bold" style={{ color: themeColor }}>Fichiers Clients</h1>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/')}
+            style={{ backgroundColor: themeColor }}
+            className="px-4 py-2 text-white rounded hover:opacity-90 transition-opacity font-medium"
+          >
+            ← Retour
+          </button>
+          <h1 className="text-4xl font-bold" style={{ color: themeColor }}>Fichiers Clients</h1>
+        </div>
         <button
           onClick={handleExport}
           style={{ backgroundColor: themeColor }}
