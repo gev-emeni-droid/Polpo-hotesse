@@ -104,4 +104,32 @@ export const ensureHotesseSchema = async (db) => {
       updated_at TEXT NOT NULL
     );
   `).run();
+
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS hotesse_privatisations_client_info (
+      priv_id TEXT PRIMARY KEY,
+      nom TEXT,
+      prenom TEXT,
+      mail TEXT,
+      telephone TEXT,
+      adresse_postale TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (priv_id) REFERENCES hotesse_privatisations(id) ON DELETE CASCADE
+    );
+  `).run();
+
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS hotesse_privatisations_documents (
+      id TEXT PRIMARY KEY,
+      priv_id TEXT NOT NULL,
+      file_name TEXT NOT NULL,
+      file_data TEXT NOT NULL,
+      mime_type TEXT NOT NULL DEFAULT 'application/octet-stream',
+      file_size INTEGER,
+      uploaded_at TEXT NOT NULL,
+      uploaded_by TEXT,
+      FOREIGN KEY (priv_id) REFERENCES hotesse_privatisations(id) ON DELETE CASCADE
+    );
+  `).run();
 };
