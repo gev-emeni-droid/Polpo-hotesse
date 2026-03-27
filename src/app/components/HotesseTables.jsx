@@ -1087,46 +1087,9 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         return;
       }
 
-      // Automatically create/update client record AND entreprise record
-      try {
-        // Create/update client (type = "client")
-        const clientRes = await fetch('/api/hotesse/clients', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            prenom: clientPrenom,
-            nom: clientNom,
-            telephone: clientTelephone,
-            mail: clientMail,
-            adresse_postale: clientAdresse,
-            entreprise: editingPriv.name || '',
-            type: 'client'
-          })
-        });
-
-        if (!clientRes.ok) {
-          console.error('Warning: Failed to sync client record:', clientRes.status);
-        }
-
-        // Create/update entreprise (type = "entreprise") 
-        if (editingPriv.name) {
-          const entrepriseRes = await fetch('/api/hotesse/clients', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              nom: editingPriv.name,
-              type: 'entreprise'
-            })
-          });
-
-          if (!entrepriseRes.ok) {
-            console.error('Warning: Failed to sync entreprise record:', entrepriseRes.status);
-          }
-        }
-      } catch (err) {
-        console.error('Warning: Error syncing client record:', err);
-      }
-
+      // Backend (client-info.js) handles client creation automatically
+      // No need to sync from frontend
+      
       alert('Infos client enregistrées avec succès !');
       console.log('Client info saved successfully');
     } catch (err) {
