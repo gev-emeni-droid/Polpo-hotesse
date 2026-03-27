@@ -102,6 +102,11 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [showClientSearch, setShowClientSearch] = useState(false);
   const [clientSearchQuery, setClientSearchQuery] = useState('');
 
+  // Autocomplete state for enterprises (in priv name field)
+  const [enterpriseSearchResults, setEnterpriseSearchResults] = useState([]);
+  const [showEnterpriseSearch, setShowEnterpriseSearch] = useState(false);
+  const [enterpriseSearchQuery, setEnterpriseSearchQuery] = useState('');
+
   // Form state pour Documents
   const [privDocuments, setPrivDocuments] = useState([]);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
@@ -1239,6 +1244,35 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     setClientSearchQuery('');
     setShowClientSearch(false);
     setClientSearchResults([]);
+  };
+
+  // Search enterprises (type='entreprise') for privacy name auto-completion
+  const searchEnterprises = async (query) => {
+    if (!query.trim() || query.length < 1) {
+      setEnterpriseSearchResults([]);
+      setShowEnterpriseSearch(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/hotesse/clients/search-enterprises?q=${encodeURIComponent(query)}&limit=8`);
+      if (!res.ok) throw new Error('Search failed');
+      
+      const enterprises = await res.json();
+      setEnterpriseSearchResults(enterprises || []);
+      setShowEnterpriseSearch(enterprises.length > 0);
+    } catch (err) {
+      console.error('Error searching enterprises:', err);
+      setEnterpriseSearchResults([]);
+    }
+  };
+
+  // Select an enterprise to fill priv name field
+  const selectEnterprise = (enterprise) => {
+    setPrivName(enterprise.nom);
+    setEnterpriseSearchQuery('');
+    setShowEnterpriseSearch(false);
+    setEnterpriseSearchResults([]);
   };
 
   // Supprimer un document
@@ -2635,14 +2669,46 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
               {/* Contenu des onglets */}
               {privModalActiveTab === 'general' && (
                 <form id="form-general" onSubmit={handleAddPrivatisation} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-2 font-medium">Nom de la privat</label>
+                  <div className="relative">
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">🏢 Nom de la privat (auto-complétion entreprises)</label>
                     <input
                       type="text"
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      placeholder="Saisissez et sélectionnez une entreprise..."
                       value={privName}
-                      onChange={(e) => setPrivName(e.target.value)}
+                      onChange={(e) => {
+                        setPrivName(e.target.value);
+                        // Auto-search for enterprises as user types
+                        if (e.target.value.length >= 1) {
+                          searchEnterprises(e.target.value);
+                        } else {
+                          setShowEnterpriseSearch(false);
+                          setEnterpriseSearchResults([]);
+                        }
+                      }}
+                      onFocus={() => privName.trim().length >= 1 && searchEnterprises(privName)}
                     />
+                    {/* Dropdown list of enterprises */}
+                    {showEnterpriseSearch && enterpriseSearchResults.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-green-300 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                        <div className="p-2 text-xs font-medium text-gray-600 border-b border-gray-200 bg-green-50">Entreprises correspondantes:</div>
+                        {enterpriseSearchResults.map((enterprise) => (
+                          <button
+                            key={enterprise.id}
+                            type="button"
+                            onClick={() => selectEnterprise(enterprise)}
+                            className="w-full text-left px-3 py-2.5 hover:bg-green-50 border-b border-gray-100 last:border-b-0 text-sm transition-colors"
+                          >
+                            <div className="font-medium text-gray-800">🏢 {enterprise.nom}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {showEnterpriseSearch && privName.trim().length >= 1 && enterpriseSearchResults.length === 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-blue-50 border border-blue-200 rounded-lg p-2 z-50 text-xs text-blue-700">
+                        Aucune entreprise trouvée pour "{privName}"
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs text-gray-700 mb-2 font-medium">Nombre de personnes</label>

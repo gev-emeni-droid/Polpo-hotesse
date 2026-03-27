@@ -53,6 +53,7 @@ async function handleGet(db, searchParams) {
     }
 
     // Smart search: search by nom, prenom, AND telephone with intelligent matching
+    // ONLY search for type='client' (personal clients, not enterprises)
     const searchTerm = `%${query.toLowerCase()}%`;
     
     // Search with priority:
@@ -61,7 +62,7 @@ async function handleGet(db, searchParams) {
     // 3. LIKE matches on telephone
     const result = await db.prepare(`
       SELECT 
-        id, civilite, prenom, nom, telephone, mail, adresse_postale, ville, code_postal, entreprise,
+        id, civilite, prenom, nom, telephone, mail, adresse_postale, ville, code_postal,
         -- Priority scoring for better sorting
         CASE 
           WHEN LOWER(nom) = ? THEN 1
@@ -74,9 +75,12 @@ async function handleGet(db, searchParams) {
         END as priority
       FROM hotesse_clients
       WHERE 
-        LOWER(prenom) LIKE ? 
-        OR LOWER(nom) LIKE ? 
-        OR LOWER(telephone) LIKE ?
+        type = 'client'
+        AND (
+          LOWER(prenom) LIKE ? 
+          OR LOWER(nom) LIKE ? 
+          OR LOWER(telephone) LIKE ?
+        )
       ORDER BY priority ASC, nom ASC, prenom ASC
       LIMIT ?
     `).bind(
