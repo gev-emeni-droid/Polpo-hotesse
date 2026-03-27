@@ -46,6 +46,7 @@ export async function onRequest(context) {
 
 async function handleGet(db, searchParams) {
   try {
+    console.error('=== GET /clients START ===');
     // Simple: just return all clients, no complex params
     const result = await db.prepare(`
       SELECT id, prenom, nom, telephone, mail, adresse_postale, entreprise, type, created_at, updated_at
@@ -54,11 +55,15 @@ async function handleGet(db, searchParams) {
     `).all();
 
     const clients = result.results || [];
+    console.error('Clients found in DB:', clients.length);
+    console.error('Client data:', JSON.stringify(clients, null, 2));
+    
     const total = clients.length;
     const page = 1;
     const pageSize = 30;
     const totalPages = Math.ceil(total / pageSize);
 
+    console.error('=== GET /clients END - Returning:', total, 'clients ===');
     return new Response(JSON.stringify({
       clients,
       total,
