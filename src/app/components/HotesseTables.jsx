@@ -416,6 +416,8 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                 // Normaliser la date de création lors du refetch
                 createdAt: updated.createdAt || updated.created_at || c.createdAt || null,
                 privatisations: normalizedPrivs,
+                // Source de vérité UI: longueur de la liste actuelle
+                priv_count: normalizedPrivs.length,
               };
               console.log('Merged calendar object:', merged);
               return merged;
@@ -1846,9 +1848,9 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                       {filteredActiveCalendars.map((c) => {
                         const createdAt = c.createdAt ? new Date(c.createdAt) : new Date(c.year, c.month || 0, 1);
                         const createdLabel = `Créé le: ${createdAt.toLocaleDateString('fr-FR')}`;
-                        const privCount = typeof c.priv_count === 'number'
-                          ? c.priv_count
-                          : (Array.isArray(c.privatisations) ? c.privatisations.length : 0);
+                        const privCount = Array.isArray(c.privatisations)
+                          ? c.privatisations.length
+                          : (typeof c.priv_count === 'number' ? c.priv_count : 0);
                         return (
                           <div
                             key={c.id}
@@ -1954,9 +1956,9 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                     const createdLabel = c.createdAt
                       ? `Créé le: ${new Date(c.createdAt).toLocaleDateString('fr-FR')}`
                       : 'Calendrier sans date de création';
-                    const privCount = typeof c.priv_count === 'number'
-                      ? c.priv_count
-                      : (Array.isArray(c.privatisations) ? c.privatisations.length : 0);
+                    const privCount = Array.isArray(c.privatisations)
+                      ? c.privatisations.length
+                      : (typeof c.priv_count === 'number' ? c.priv_count : 0);
                     return (
                       <div
                         key={c.id}
