@@ -121,10 +121,18 @@ export const onRequest = async ({ env, request }) => {
     debugLogs.push(`>>> Save complete`);
     
     console.log('>>> Returning successful response with', debugLogs.length, 'logs');
-    return new Response(JSON.stringify({ id, success: true, debug_logs: debugLogs }), {
+    const responseBody = { 
+      id, 
+      success: true,
+      endpoint: 'privatisations-index-js-POST',
+      debug_logs: debugLogs 
+    };
+    console.log('>>> Response body:', JSON.stringify(responseBody));
+    return new Response(JSON.stringify(responseBody), {
       status: 200,
       headers: {
         'content-type': 'application/json',
+        'x-debug-endpoint': 'privatisations-index-js',
         ...corsHeaders,
       },
     });
