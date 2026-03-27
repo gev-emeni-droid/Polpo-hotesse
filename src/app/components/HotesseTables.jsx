@@ -194,6 +194,14 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [hideMailUpdateNotice, setHideMailUpdateNotice] = useLocalStorage('hotesse_hide_mail_update_notice_v1', false);
   const [showMailUpdateModal, setShowMailUpdateModal] = useState(true);
 
+  useEffect(() => {
+    // Afficher le modal a chaque retour sur la page des calendriers actifs,
+    // sauf si l'utilisateur a coche "Ne plus afficher ce message".
+    if (!isFullPage && !archivesMode && !hideMailUpdateNotice) {
+      setShowMailUpdateModal(true);
+    }
+  }, [isFullPage, archivesMode, hideMailUpdateNotice]);
+
   // Paramètres : préfixe du titre du calendrier sélectionné
   const [settingsTitlePrefix, setSettingsTitlePrefix] = useState('');
 
@@ -1720,6 +1728,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                       onChange={(e) => {
                         if (e.target.checked) {
                           setHideMailUpdateNotice(true);
+                          setShowMailUpdateModal(false);
                         }
                       }}
                     />
