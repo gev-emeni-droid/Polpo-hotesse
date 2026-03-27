@@ -88,29 +88,51 @@ async function handleGet(db, clientId) {
       });
     }
 
-    // Get all privatisations for this client
-    // Handle both cases: with prenom and without (NULL prenom)
-    let privs;
-    if (client.prenom) {
-      privs = await db.prepare(`
-        SELECT p.* FROM hotesse_privatisations p
-        INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
-        WHERE pci.nom = ? AND pci.prenom = ? AND pci.telephone = ?
-        ORDER BY p.date DESC
-      `).bind(client.nom, client.prenom, client.telephone).all();
+    console.log(`>>> Fetching privatisations for client: ${clientId}, type: ${client.type}, nom: ${client.nom}`);
+
+    // Get all privatisations for this client based on type
+    let privResults = [];
+
+    if (client.type === 'entreprise') {
+      // For enterprise clients: search by privatisation name
+      console.log(`>>> Searching privatisations by entreprise name: ${client.nom}`);
+      const privs = await db.prepare(`
+        SELECT * FROM hotesse_privatisations
+        WHERE name = ?
+        ORDER BY date DESC
+      `).bind(client.nom).all();
+      
+      privResults = privs.results || [];
+      console.log(`>>> Found ${privResults.length} privatisations for entreprise`);
     } else {
-      // If prenom is NULL, search without it
-      privs = await db.prepare(`
-        SELECT p.* FROM hotesse_privatisations p
-        INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
-        WHERE pci.nom = ? AND pci.prenom IS NULL AND pci.telephone = ?
-        ORDER BY p.date DESC
-      `).bind(client.nom, client.telephone).all();
+      // For personal clients: search in client_info table
+      console.log(`>>> Searching privatisations by client info name: ${client.nom}`);
+      
+      let privs;
+      if (client.prenom) {
+        privs = await db.prepare(`
+          SELECT p.* FROM hotesse_privatisations p
+          INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
+          WHERE pci.nom = ? AND pci.prenom = ? AND pci.telephone = ?
+          ORDER BY p.date DESC
+        `).bind(client.nom, client.prenom, client.telephone).all();
+      } else {
+        // If prenom is NULL, search without it
+        privs = await db.prepare(`
+          SELECT p.* FROM hotesse_privatisations p
+          INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
+          WHERE pci.nom = ? AND pci.prenom IS NULL AND pci.telephone = ?
+          ORDER BY p.date DESC
+        `).bind(client.nom, client.telephone).all();
+      }
+      
+      privResults = privs.results || [];
+      console.log(`>>> Found ${privResults.length} privatisations for client`);
     }
 
+    // Fetch documents for each privatisation
     const privatisations = [];
-    for (const priv of privs.results || []) {
-      // Get documents for this privatisation
+    for (const priv of privResults) {
       const docs = await db.prepare(`
         SELECT id, file_name, mime_type, file_size, file_data, uploaded_at, uploaded_by
         FROM hotesse_privatisations_documents
@@ -129,6 +151,8 @@ async function handleGet(db, clientId) {
         documents: mappedDocs
       });
     }
+
+    console.log(`>>> Returning ${privatisations.length} privatisations with documents`);
 
     return new Response(JSON.stringify({
       client,
