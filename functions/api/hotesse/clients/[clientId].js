@@ -24,21 +24,49 @@ export async function onRequest(context) {
   }
 
   const method = request.method.toUpperCase();
-  
+
   if (method === 'GET') {
     return handleGet(db, clientId);
+  }
+
+  if (method === 'PUT') {
+    return handlePut(db, clientId, request);
   }
 
   if (method === 'DELETE') {
     return handleDelete(db, clientId);
   }
-  
+
   return new Response(JSON.stringify({ error: 'Method not allowed' }), {
     status: 405,
     headers: { 'Content-Type': 'application/json' }
   });
 }
 
+async function handlePut(db, clientId, request) {
+  try {
+    const body = await request.json();
+    const { nom, prenom, telephone, mail, adresse_postale, ville, code_postal } = body;
+    const now = new Date().toISOString();
+
+    await db.prepare(
+      `UPDATE hotesse_clients
+       SET nom = ?, prenom = ?, telephone = ?, mail = ?, adresse_postale = ?, ville = ?, code_postal = ?, updated_at = ?
+       WHERE id = ?`
+    ).bind(nom || null, prenom || null, telephone || null, mail || null, adresse_postale || null, ville || null, code_postal || null, now, clientId).run();
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Error updating client:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
 async function handleDelete(db, clientId) {
   try {
     // Delete the client

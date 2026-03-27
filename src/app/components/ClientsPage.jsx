@@ -16,6 +16,9 @@ export default function ClientsPage() {
   const [selectedClient, setSelectedClient] = useState(null);
   const [clientDetails, setClientDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [uploadingDocPrivId, setUploadingDocPrivId] = useState(null);
 
   const themeColor = themeLoaded && selectedTheme 
     ? (COLOR_PALETTES.find(p => p.id === selectedTheme)?.primary || '#999999') 
@@ -173,6 +176,67 @@ export default function ClientsPage() {
     }
   };
 
+    const handleStartEdit = () => {
+      setEditForm({
+        nom: clientDetails.client.nom || '',
+        prenom: clientDetails.client.prenom || '',
+        telephone: clientDetails.client.telephone || '',
+        mail: clientDetails.client.mail || '',
+        adresse_postale: clientDetails.client.adresse_postale || '',
+        ville: clientDetails.client.ville || '',
+      });
+      setIsEditing(true);
+    };
+
+    const handleSaveClient = async () => {
+      try {
+        const res = await fetch(`/api/hotesse/clients/${selectedClient}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(editForm),
+        });
+        if (!res.ok) throw new Error('Failed to update client');
+        await fetchClientDetails(selectedClient);
+        setIsEditing(false);
+        fetchClients(page);
+      } catch (err) {
+        console.error('Error saving client:', err);
+        alert('Erreur lors de la sauvegarde');
+      }
+    };
+
+    const handleUploadDocFromClient = async (privId, file) => {
+      if (!file) return;
+      setUploadingDocPrivId(privId);
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const base64Data = e.target.result.split(',')[1];
+          const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(privId)}/documents`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file_name: file.name, file_data: base64Data, mime_type: file.type, uploaded_by: 'fichier_client' }),
+          });
+          if (res.ok) await fetchClientDetails(selectedClient);
+        } catch (err) {
+          console.error('Error uploading doc:', err);
+        } finally {
+          setUploadingDocPrivId(null);
+        }
+      };
+      reader.readAsDataURL(file);
+    };
+
+    const handleDeleteDocFromClient = async (privId, docId) => {
+      if (!window.confirm('Supprimer ce document ?')) return;
+      try {
+        const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(privId)}/documents?doc_id=${encodeURIComponent(docId)}`, { method: 'DELETE' });
+        if (res.ok) await fetchClientDetails(selectedClient);
+      } catch (err) {
+        console.error('Error deleting doc:', err);
+      }
+    };
+
   if (selectedClient && clientDetails) {
     return (
       <div className="p-6 bg-white rounded-lg">
@@ -181,7 +245,8 @@ export default function ClientsPage() {
             onClick={() => {
               setSelectedClient(null);
               setClientDetails(null);
-            }}
+              setIsEditing(false);
+              }}
             style={{ backgroundColor: themeColor }}
             className="px-4 py-2 text-white rounded hover:opacity-90 transition-opacity font-medium"
           >
@@ -190,27 +255,87 @@ export default function ClientsPage() {
         </div>
 
         <div className="mb-8 pb-6 border-b" style={{ borderColor: `${themeColor}33` }}>
-          <h2 className="text-3xl font-bold mb-6" style={{ color: themeColor }}>
-            {clientDetails.client.prenom} {clientDetails.client.nom}
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-6 bg-gray-50 p-6 rounded-lg">
-            <div>
-              <label className="text-xs font-semibold uppercase" style={{ color: themeColor }}>Téléphone</label>
-              <p className="font-medium text-gray-800 mt-1">{clientDetails.client.telephone}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase" style={{ color: themeColor }}>Mail</label>
-              <p className="font-medium text-gray-800 mt-1">{clientDetails.client.mail || '-'}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase" style={{ color: themeColor }}>Entreprise</label>
-              <p className="font-medium text-gray-800 mt-1">{clientDetails.client.entreprise || '-'}</p>
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-xs font-semibold uppercase" style={{ color: themeColor }}>Adresse</label>
-              <p className="font-medium text-gray-800 mt-1">{clientDetails.client.adresse_postale || '-'}</p>
-            </div>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-3xl font-bold" style={{ color: themeColor }}>
+              {clientDetails.client.prenom} {clientDetails.client.nom}
+            </h2>
+            {!isEditing ? (
+              <button
+                onClick={handleStartEdit}
+                className="px-4 py-2 text-sm font-semibold rounded-lg border-2 transition-colors"
+                style={{ borderColor: themeColor, color: themeColor }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = themeColor; e.currentTarget.style.color = 'white'; }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = themeColor; }}
+              >
+                ✏️ Modifier
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveClient}
+                  className="px-4 py-2 text-sm font-semibold rounded-lg text-white hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: themeColor }}
+                >
+                  Sauvegarder
+                </button>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+                >
+                  Annuler
+                </button>
+              </div>
+            )}
           </div>
+          {isEditing ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 bg-gray-50 p-6 rounded-lg">
+              {clientDetails.client.type !== 'entreprise' && (
+                <div>
+                  <label className="text-xs font-semibold uppercase block mb-1" style={{ color: themeColor }}>Prénom</label>
+                  <input type="text" value={editForm.prenom || ''} onChange={e => setEditForm(f => ({ ...f, prenom: e.target.value }))} className="w-full px-3 py-2 border rounded text-sm focus:outline-none" style={{ borderColor: `${themeColor}60` }} />
+                </div>
+              )}
+              <div>
+                <label className="text-xs font-semibold uppercase block mb-1" style={{ color: themeColor }}>Nom</label>
+                <input type="text" value={editForm.nom || ''} onChange={e => setEditForm(f => ({ ...f, nom: e.target.value }))} className="w-full px-3 py-2 border rounded text-sm focus:outline-none" style={{ borderColor: `${themeColor}60` }} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase block mb-1" style={{ color: themeColor }}>Téléphone</label>
+                <input type="text" value={editForm.telephone || ''} onChange={e => setEditForm(f => ({ ...f, telephone: e.target.value }))} className="w-full px-3 py-2 border rounded text-sm focus:outline-none" style={{ borderColor: `${themeColor}60` }} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase block mb-1" style={{ color: themeColor }}>Mail</label>
+                <input type="email" value={editForm.mail || ''} onChange={e => setEditForm(f => ({ ...f, mail: e.target.value }))} className="w-full px-3 py-2 border rounded text-sm focus:outline-none" style={{ borderColor: `${themeColor}60` }} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase block mb-1" style={{ color: themeColor }}>Adresse</label>
+                <input type="text" value={editForm.adresse_postale || ''} onChange={e => setEditForm(f => ({ ...f, adresse_postale: e.target.value }))} className="w-full px-3 py-2 border rounded text-sm focus:outline-none" style={{ borderColor: `${themeColor}60` }} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase block mb-1" style={{ color: themeColor }}>Ville</label>
+                <input type="text" value={editForm.ville || ''} onChange={e => setEditForm(f => ({ ...f, ville: e.target.value }))} className="w-full px-3 py-2 border rounded text-sm focus:outline-none" style={{ borderColor: `${themeColor}60` }} />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-6 bg-gray-50 p-6 rounded-lg">
+              <div>
+                <label className="text-xs font-semibold uppercase" style={{ color: themeColor }}>Téléphone</label>
+                <p className="font-medium text-gray-800 mt-1">{clientDetails.client.telephone || '-'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase" style={{ color: themeColor }}>Mail</label>
+                <p className="font-medium text-gray-800 mt-1">{clientDetails.client.mail || '-'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase" style={{ color: themeColor }}>Entreprise</label>
+                <p className="font-medium text-gray-800 mt-1">{clientDetails.client.entreprise || '-'}</p>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-xs font-semibold uppercase" style={{ color: themeColor }}>Adresse</label>
+                <p className="font-medium text-gray-800 mt-1">{clientDetails.client.adresse_postale || '-'}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <h3 className="text-2xl font-bold mb-4" style={{ color: themeColor }}>
@@ -242,26 +367,59 @@ export default function ClientsPage() {
                   </div>
                 </div>
 
-                {priv.documents.length > 0 && (
-                  <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${themeColor}40` }}>
-                    <label className="text-sm font-semibold text-gray-700 block mb-2" style={{ color: themeColor }}>
+                <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${themeColor}40` }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-semibold" style={{ color: themeColor }}>
                       Documents ({priv.documents.length})
                     </label>
-                    <div className="space-y-2">
+                    <label
+                      className="cursor-pointer text-xs font-semibold px-3 py-1 rounded-full text-white hover:opacity-90 transition-opacity"
+                      style={{ backgroundColor: uploadingDocPrivId === priv.id ? '#9ca3af' : themeColor }}
+                    >
+                      {uploadingDocPrivId === priv.id ? 'Envoi...' : '+ Ajouter'}
+                      <input
+                        type="file"
+                        className="hidden"
+                        disabled={uploadingDocPrivId !== null}
+                        onChange={e => {
+                          const file = e.target.files[0];
+                          if (file) handleUploadDocFromClient(priv.id, file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {priv.documents.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic">Aucun document</p>
+                  ) : (
+                    <div className="space-y-1">
                       {priv.documents.map((doc) => (
-                        <button
+                        <div
                           key={doc.id}
-                          onClick={() => downloadDocument(doc)}
-                          className="w-full flex items-center justify-between p-2 rounded hover:shadow-md transition-all cursor-pointer text-left"
+                          className="flex items-center justify-between p-2 rounded"
                           style={{ backgroundColor: `${themeColor}10` }}
                         >
-                          <span className="text-sm text-gray-700 font-medium">{doc.file_name}</span>
-                          <span className="text-xs font-medium" style={{ color: themeColor }}>{(doc.file_size / 1024).toFixed(2)} KB</span>
-                        </button>
+                          <button
+                            onClick={() => downloadDocument(doc)}
+                            className="text-sm text-gray-700 font-medium hover:underline text-left flex-1 truncate"
+                          >
+                            {doc.file_name}
+                          </button>
+                          <div className="flex items-center gap-2 ml-2 shrink-0">
+                            <span className="text-xs" style={{ color: themeColor }}>{(doc.file_size / 1024).toFixed(1)} KB</span>
+                            <button
+                              onClick={() => handleDeleteDocFromClient(priv.id, doc.id)}
+                              className="text-gray-400 hover:text-red-600 transition-colors text-base"
+                              title="Supprimer ce document"
+                            >
+                              🗑
+                            </button>
+                          </div>
+                        </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             ))}
           </div>
