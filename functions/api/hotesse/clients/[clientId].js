@@ -90,68 +90,42 @@ async function handleGet(db, clientId) {
       privResults = privs.results || [];
       console.log(`>>> Found ${privResults.length} privatisations for entreprise`);
     } else {
-      // For personal clients: search in TWO ways
-      // 1. By client_info (their personal info)
-      // 2. By their associated entreprise (if they have one)
-      
-      let clientPrivs = [];
-      let entreprisePrivs = [];
-      
-      // Search by personal client info
+      // For personal clients: search ONLY in client_info table by their personal info
       console.log(`>>> Searching privatisations by client info name: ${client.nom}`);
-      if (client.prenom) {
-        const privs = await db.prepare(`
+      
+      let privs;
+      if (client.prenom && client.telephone) {
+        privs = await db.prepare(`
           SELECT p.* FROM hotesse_privatisations p
           INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
           WHERE pci.nom = ? AND pci.prenom = ? AND pci.telephone = ?
           ORDER BY p.date DESC
         `).bind(client.nom, client.prenom, client.telephone).all();
-        clientPrivs = privs.results || [];
+      } else if (client.prenom) {
+        privs = await db.prepare(`
+          SELECT p.* FROM hotesse_privatisations p
+          INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
+          WHERE pci.nom = ? AND pci.prenom = ?
+          ORDER BY p.date DESC
+        `).bind(client.nom, client.prenom).all();
       } else if (client.telephone) {
-        const privs = await db.prepare(`
+        privs = await db.prepare(`
           SELECT p.* FROM hotesse_privatisations p
           INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
           WHERE pci.nom = ? AND pci.telephone = ?
           ORDER BY p.date DESC
         `).bind(client.nom, client.telephone).all();
-        clientPrivs = privs.results || [];
       } else {
-        const privs = await db.prepare(`
+        privs = await db.prepare(`
           SELECT p.* FROM hotesse_privatisations p
           INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
           WHERE pci.nom = ?
           ORDER BY p.date DESC
         `).bind(client.nom).all();
-        clientPrivs = privs.results || [];
       }
       
-      console.log(`>>> Found ${clientPrivs.length} privatisations for client personal info`);
-      
-      // If client is associated with an entreprise, also fetch those privatisations
-      if (client.entreprise && client.entreprise.trim()) {
-        console.log(`>>> Searching privatisations by associated entreprise: ${client.entreprise}`);
-        const privs = await db.prepare(`
-          SELECT * FROM hotesse_privatisations
-          WHERE name = ?
-          ORDER BY date DESC
-        `).bind(client.entreprise).all();
-        
-        entreprisePrivs = privs.results || [];
-        console.log(`>>> Found ${entreprisePrivs.length} privatisations for associated entreprise`);
-      }
-      
-      // Merge both lists, favoring unique by ID (in case a priv is in both)
-      const privMap = new Map();
-      clientPrivs.forEach(p => privMap.set(p.id, p));
-      entreprisePrivs.forEach(p => privMap.set(p.id, p));
-      
-      privResults = Array.from(privMap.values()).sort((a, b) => {
-        const dateA = a.date ? new Date(a.date).getTime() : 0;
-        const dateB = b.date ? new Date(b.date).getTime() : 0;
-        return dateB - dateA;
-      });
-      
-      console.log(`>>> Total unique privatisations: ${privResults.length}`);
+      privResults = privs.results || [];
+      console.log(`>>> Found ${privResults.length} privatisations for personal client (by client_info only)`);
     }
 
     // Fetch documents for each privatisation
