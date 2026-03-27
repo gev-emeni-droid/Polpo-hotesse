@@ -100,9 +100,9 @@ export const onRequest = async ({ env, request }) => {
     // AUTO-CREATE ENTREPRISE CLIENT if name is provided
     if (name && name.trim()) {
       debugLogs.push(`>>> Auto-create: Checking if entreprise "${name}" exists`);
-      // Check if entreprise client already exists
+      // Check if entreprise client already exists (case-insensitive to avoid duplicates)
       const existing = await env.DB.prepare(
-        `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'entreprise'`
+        `SELECT id FROM hotesse_clients WHERE LOWER(nom) = LOWER(?) AND type = 'entreprise'`
       ).bind(name).first();
       
       if (!existing) {

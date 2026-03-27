@@ -161,8 +161,9 @@ export async function onRequest(context) {
         if (privName) {
           try {
             logs.push(`>>> Checking for existing entreprise: ${privName}`);
+            // Case-insensitive lookup to avoid duplicates
             const existingEntreprise = await db.prepare(
-              `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'entreprise'`
+              `SELECT id FROM hotesse_clients WHERE LOWER(nom) = LOWER(?) AND type = 'entreprise'`
             ).bind(privName).first();
 
             if (existingEntreprise) {
