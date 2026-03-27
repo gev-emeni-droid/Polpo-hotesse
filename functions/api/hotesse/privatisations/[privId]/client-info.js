@@ -96,12 +96,26 @@ export async function onRequest(context) {
         // 1. Create or UPDATE client (type = "client") with personal info
         try {
           // Check if client exists by prenom+nom+telephone
-          const existingClient = await db.prepare(
-            `SELECT id FROM hotesse_clients WHERE prenom = ? AND nom = ? AND type = 'client'`
-          ).bind(prenom || null, nom).first();
+          let existingClient = null;
+          
+          // Build dynamic query based on available fields
+          if (prenom && telephone) {
+            existingClient = await db.prepare(
+              `SELECT id FROM hotesse_clients WHERE prenom = ? AND nom = ? AND telephone = ? AND type = 'client'`
+            ).bind(prenom, nom, telephone).first();
+          } else if (prenom) {
+            existingClient = await db.prepare(
+              `SELECT id FROM hotesse_clients WHERE prenom = ? AND nom = ? AND type = 'client'`
+            ).bind(prenom, nom).first();
+          } else {
+            existingClient = await db.prepare(
+              `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'client' AND prenom IS NULL`
+            ).bind(nom).first();
+          }
 
           if (existingClient) {
             // Update existing client
+            console.log('Updating existing client:', existingClient.id);
             await db.prepare(
               `UPDATE hotesse_clients 
                SET telephone = ?, mail = ?, adresse_postale = ?, entreprise = ?, updated_at = ?
@@ -111,6 +125,7 @@ export async function onRequest(context) {
           } else {
             // Create new client
             const clientId = `client_${crypto.randomUUID()}`;
+            console.log('Creating new client:', { prenom, nom, telephone, type: 'client' });
             await db.prepare(
               `INSERT INTO hotesse_clients 
                (id, prenom, nom, telephone, mail, adresse_postale, entreprise, type, created_at, updated_at)
@@ -119,7 +134,7 @@ export async function onRequest(context) {
             console.log('Created client (type=client):', clientId);
           }
         } catch (err) {
-          console.error('Error creating/updating client:', err);
+          console.error('Error creating/updating client:', err.message, err);
         }
 
         // 2. Create or UPDATE entreprise client from privatisation name
