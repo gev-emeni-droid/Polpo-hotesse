@@ -191,7 +191,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [newNotifPhone, setNewNotifPhone] = useState('');
   const [notifChannelById, setNotifChannelById] = useState({});
   const [editingNotifId, setEditingNotifId] = useState(null);
-  const [hideMailUpdateNotice, setHideMailUpdateNotice] = useLocalStorage('hotesse_hide_mail_update_notice_v1', false);
+  const [hideMailUpdateNotice, setHideMailUpdateNotice] = useLocalStorage('hotesse_hide_mail_update_notice_v2', false);
   const [showMailUpdateModal, setShowMailUpdateModal] = useState(true);
 
   useEffect(() => {
@@ -1715,10 +1715,23 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
             {!hideMailUpdateNotice && showMailUpdateModal && (
               <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/45 px-4">
                 <div className="w-full max-w-xl rounded-xl bg-white shadow-2xl border border-gray-200 p-6">
-                  <h3 className="text-lg font-bold text-gray-900">Nouvelle mise a jour</h3>
-                  <p className="mt-3 text-sm text-gray-700 leading-relaxed">
-                    Le bouton "Envoyer une notification" envoie desormais l'e-mail automatiquement.
-                    Vous n'avez plus besoin d'ouvrir votre messagerie pour l'envoyer manuellement.
+                  <h3 className="text-lg font-bold text-gray-900">Nouveautés & Rappels</h3>
+
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-gray-500">✨ Nouvelles fonctionnalités</p>
+                  <ul className="mt-2 space-y-2 text-sm text-gray-700 leading-relaxed list-none">
+                    <li><span className="font-semibold">Fichiers Clients & Entreprises</span> — Accédez à la liste complète de vos clients et entreprises depuis le menu principal.</li>
+                    <li><span className="font-semibold">Documents par privatisation</span> — Ajoutez des documents directement sur une privatisation : hôtesses bookées, feuille de fonction, factures, etc.</li>
+                    <li><span className="font-semibold">Envoi e-mail automatique</span> — Le bouton "Envoyer une notification" expédie désormais l'e-mail automatiquement, sans ouvrir votre messagerie.</li>
+                  </ul>
+
+                  <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-500">⚙️ Rappel — Paramètres personnalisables</p>
+                  <p className="mt-1 text-sm text-gray-700 leading-relaxed">
+                    Vous pouvez modifier à tout moment les options <span className="font-semibold">"Prise en charge par"</span>, les <span className="font-semibold">hôtesses du restaurant</span> et les <span className="font-semibold">contacts de notification</span> depuis le menu Paramètres.
+                  </p>
+
+                  <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-500">🔜 Prochaine mise à jour</p>
+                  <p className="mt-1 text-sm text-gray-700 leading-relaxed">
+                    Intégration d'un <span className="font-semibold">module de facturation</span> directement dans l'application.
                   </p>
 
                   <label className="mt-4 inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
