@@ -88,11 +88,14 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [privModalActiveTab, setPrivModalActiveTab] = useState('general'); // 'general' | 'infos_client' | 'documents'
 
   // Form state pour Infos client
+  const [clientCivilite, setClientCivilite] = useState('Mme'); // Mme, M., Autre
   const [clientNom, setClientNom] = useState('');
   const [clientPrenom, setClientPrenom] = useState('');
   const [clientMail, setClientMail] = useState('');
   const [clientTelephone, setClientTelephone] = useState('');
   const [clientAdresse, setClientAdresse] = useState('');
+  const [clientVille, setClientVille] = useState('');
+  const [clientCodePostal, setClientCodePostal] = useState('');
   
   // Autocomplete state for clients
   const [clientSearchResults, setClientSearchResults] = useState([]);
@@ -1067,24 +1070,38 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
       return;
     }
 
+    // Validation: NOM + PRENOM + TELEPHONE are required
+    if (!clientNom.trim() || !clientPrenom.trim() || !clientTelephone.trim()) {
+      alert('❌ Erreur : NOM, PRÉNOM et TÉLÉPHONE sont obligatoires');
+      return;
+    }
+
     try {
-      // Log what we're about to send
       console.log('>>> [FRONTEND] About to save client info:');
-      console.log('>>> [FRONTEND] clientNom:', JSON.stringify(clientNom), 'isEmpty:', clientNom === '', 'isFalsy:', !clientNom);
-      console.log('>>> [FRONTEND] clientPrenom:', JSON.stringify(clientPrenom), 'isEmpty:', clientPrenom === '', 'isFalsy:', !clientPrenom);
-      console.log('>>> [FRONTEND] clientTelephone:', JSON.stringify(clientTelephone), 'isEmpty:', clientTelephone === '', 'isFalsy:', !clientTelephone);
-      console.log('>>> [FRONTEND] Full payload:', { nom: clientNom, prenom: clientPrenom, mail: clientMail, telephone: clientTelephone, adresse_postale: clientAdresse });
+      console.log('>>> [FRONTEND] Payload:', {
+        civilite: clientCivilite,
+        nom: clientNom,
+        prenom: clientPrenom,
+        telephone: clientTelephone,
+        mail: clientMail,
+        adresse_postale: clientAdresse,
+        ville: clientVille,
+        code_postal: clientCodePostal
+      });
       
       // Save client info to privatisation
       const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/client-info`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          civilite: clientCivilite,
           nom: clientNom,
           prenom: clientPrenom,
           mail: clientMail,
           telephone: clientTelephone,
-          adresse_postale: clientAdresse
+          adresse_postale: clientAdresse,
+          ville: clientVille,
+          code_postal: clientCodePostal
         })
       });
 
@@ -1103,10 +1120,21 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
       // Backend (client-info.js) handles client creation automatically
       // No need to sync from frontend
       
-      alert('Infos client enregistrées avec succès !');
+      alert('✅ Infos client enregistrées avec succès !');
       console.log('Client info saved successfully');
+      
+      // Clear form
+      setClientCivilite('Mme');
+      setClientNom('');
+      setClientPrenom('');
+      setClientMail('');
+      setClientTelephone('');
+      setClientAdresse('');
+      setClientVille('');
+      setClientCodePostal('');
+      setClientSearchQuery('');
     } catch (err) {
-      alert('Erreur lors de l\'enregistrement: ' + err.message);
+      alert('❌ Erreur lors de l\'enregistrement: ' + err.message);
       console.error('Error saving client info:', err);
     }
   };
@@ -1200,12 +1228,15 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
 
   // Select a client from search results
   const selectClient = (client) => {
+    setClientCivilite(client.civilite || 'Mme');
     setClientNom(client.nom);
     setClientPrenom(client.prenom);
     setClientMail(client.mail || '');
     setClientTelephone(client.telephone || '');
     setClientAdresse(client.adresse_postale || '');
-    setClientSearchQuery(`${client.prenom} ${client.nom}`);
+    setClientVille(client.ville || '');
+    setClientCodePostal(client.code_postal || '');
+    setClientSearchQuery('');
     setShowClientSearch(false);
     setClientSearchResults([]);
   };
@@ -2761,82 +2792,171 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
               {/* Onglet Infos client */}
               {privModalActiveTab === 'infos_client' && (
                 <div className="space-y-4 mb-6">
+                  {/* Auto-search Section */}
                   <div>
-                    <label className="block text-xs text-gray-700 mb-2 font-medium">RECHERCHER UN CLIENT</label>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">🔍 RECHERCHER UN CLIENT EXISTANT</label>
+                    <p className="text-xs text-gray-500 mb-2">Tapez le début du NOM, PRÉNOM ou N° TÉLÉPHONE</p>
                     <div className="relative">
                       <input
                         type="text"
-                        placeholder="Tapez nom ou prénom..."
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                        placeholder="Ex: Mar, Dupont, 06 ou 0612..."
+                        className="w-full border-2 border-blue-300 rounded-lg px-3 py-2 text-sm bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400"
                         value={clientSearchQuery}
                         onChange={(e) => {
                           setClientSearchQuery(e.target.value);
                           searchClients(e.target.value);
                         }}
-                        onFocus={() => clientSearchQuery.trim() && searchClients(clientSearchQuery)}
+                        onFocus={() => clientSearchQuery.trim().length >= 2 && searchClients(clientSearchQuery)}
                       />
                       {showClientSearch && clientSearchResults.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-blue-300 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                          <div className="p-2 text-xs font-medium text-gray-600 border-b border-gray-200">Clients correspondants :</div>
                           {clientSearchResults.map((client) => (
                             <button
                               key={client.id}
                               type="button"
                               onClick={() => selectClient(client)}
-                              className="w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-b-0 text-sm"
+                              className="w-full text-left px-3 py-2.5 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 text-sm transition-colors"
                             >
-                              <strong>{client.prenom} {client.nom}</strong> • {client.telephone}
-                              {client.entreprise && <div className="text-xs text-gray-500">{client.entreprise}</div>}
+                              <div className="font-medium text-gray-800">{client.civilite || '—'} {client.prenom} {client.nom}</div>
+                              <div className="text-xs text-gray-600">📞 {client.telephone || '—'}</div>
+                              {client.mail && <div className="text-xs text-gray-500">✉️ {client.mail}</div>}
                             </button>
                           ))}
                         </div>
                       )}
+                      {showClientSearch && clientSearchQuery.trim().length < 2 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-yellow-50 border border-yellow-200 rounded-lg p-2 z-50 text-xs text-yellow-700">
+                          Tapez au moins 2 caractères...
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-2 font-medium">NOM</label>
-                    <input
-                      type="text"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                      value={clientNom}
-                      onChange={(e) => setClientNom(e.target.value)}
-                    />
+
+                  <div className="border-t-2 border-gray-200 my-4 pt-4">
+                    <p className="text-xs text-gray-600 mb-3">Remplissez les champs du client (NOM + PRÉNOM + TÉLÉPHONE sont obligatoires)</p>
                   </div>
+
+                  {/* Civilité */}
                   <div>
-                    <label className="block text-xs text-gray-700 mb-2 font-medium">PRENOM</label>
-                    <input
-                      type="text"
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">CIVILITÉ</label>
+                    <select
+                      value={clientCivilite}
+                      onChange={(e) => setClientCivilite(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                      value={clientPrenom}
-                      onChange={(e) => setClientPrenom(e.target.value)}
-                    />
+                    >
+                      <option value="Mme">Mme</option>
+                      <option value="M.">M.</option>
+                      <option value="Mlle">Mlle</option>
+                      <option value="Autre">Autre</option>
+                    </select>
                   </div>
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-2 font-medium">MAIL</label>
-                    <input
-                      type="email"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                      value={clientMail}
-                      onChange={(e) => setClientMail(e.target.value)}
-                    />
+
+                  {/* Row 1: NOM + PRÉNOM (côte à côte) */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-700 mb-2 font-medium">NOM <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Dupont"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                        value={clientNom}
+                        onChange={(e) => {
+                          setClientNom(e.target.value);
+                          // Déclencher la recherche automatiquement
+                          if (e.target.value.length >= 2) {
+                            searchClients(e.target.value);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-700 mb-2 font-medium">PRÉNOM <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Marie"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                        value={clientPrenom}
+                        onChange={(e) => {
+                          setClientPrenom(e.target.value);
+                          if (e.target.value.length >= 2) {
+                            searchClients(e.target.value);
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-2 font-medium">NUMERO DE TELEPHONE</label>
-                    <input
-                      type="tel"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                      value={clientTelephone}
-                      onChange={(e) => setClientTelephone(e.target.value)}
-                    />
+
+                  {/* Row 2: TÉLÉPHONE + EMAIL (côte à côte) */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-700 mb-2 font-medium">TÉLÉPHONE <span className="text-red-500">*</span></label>
+                      <input
+                        type="tel"
+                        placeholder="Ex: 06 12 34 56 78"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                        value={clientTelephone}
+                        onChange={(e) => {
+                          setClientTelephone(e.target.value);
+                          if (e.target.value.length >= 2) {
+                            searchClients(e.target.value);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-700 mb-2 font-medium">EMAIL</label>
+                      <input
+                        type="email"
+                        placeholder="Ex: marie@example.com"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                        value={clientMail}
+                        onChange={(e) => setClientMail(e.target.value)}
+                      />
+                    </div>
                   </div>
+
+                  {/* Row 3: ADRESSE + VILLE + CODE POSTAL */}
                   <div>
                     <label className="block text-xs text-gray-700 mb-2 font-medium">ADRESSE POSTALE</label>
                     <textarea
+                      placeholder="Ex: 123 rue de la Paix"
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                      rows="3"
+                      rows="2"
                       value={clientAdresse}
                       onChange={(e) => setClientAdresse(e.target.value)}
                     />
                   </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-700 mb-2 font-medium">VILLE</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Paris"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                        value={clientVille}
+                        onChange={(e) => setClientVille(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-700 mb-2 font-medium">CODE POSTAL</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: 75000"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                        value={clientCodePostal}
+                        onChange={(e) => setClientCodePostal(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Validation message */}
+                  {(!clientNom.trim() || !clientPrenom.trim() || !clientTelephone.trim()) && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
+                      ⚠️ Remplissez au minimum: NOM, PRÉNOM et TÉLÉPHONE pour enregistrer le client
+                    </div>
+                  )}
                 </div>
               )}
 

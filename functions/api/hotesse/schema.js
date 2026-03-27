@@ -116,16 +116,30 @@ export const ensureHotesseSchema = async (db) => {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS hotesse_privatisations_client_info (
       priv_id TEXT PRIMARY KEY,
+      civilite TEXT DEFAULT 'Mme',
       nom TEXT,
       prenom TEXT,
       mail TEXT,
       telephone TEXT,
       adresse_postale TEXT,
+      ville TEXT,
+      code_postal TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (priv_id) REFERENCES hotesse_privatisations(id) ON DELETE CASCADE
     );
   `).run();
+
+  // Add missing columns retroactively if they don't exist
+  try {
+    await db.prepare('ALTER TABLE hotesse_privatisations_client_info ADD COLUMN civilite TEXT DEFAULT \'Mme\'').run();
+  } catch (_) {}
+  try {
+    await db.prepare('ALTER TABLE hotesse_privatisations_client_info ADD COLUMN ville TEXT').run();
+  } catch (_) {}
+  try {
+    await db.prepare('ALTER TABLE hotesse_privatisations_client_info ADD COLUMN code_postal TEXT').run();
+  } catch (_) {}
 
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS hotesse_privatisations_documents (
@@ -144,11 +158,14 @@ export const ensureHotesseSchema = async (db) => {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS hotesse_clients (
       id TEXT PRIMARY KEY,
+      civilite TEXT DEFAULT 'Mme',
       prenom TEXT,
       nom TEXT NOT NULL,
       telephone TEXT,
       mail TEXT,
       adresse_postale TEXT,
+      ville TEXT,
+      code_postal TEXT,
       entreprise TEXT,
       type TEXT DEFAULT 'client',
       created_at TEXT NOT NULL,
@@ -156,7 +173,16 @@ export const ensureHotesseSchema = async (db) => {
     );
   `).run();
 
-  // Add type column retroactively if it doesn't exist
+  // Add missing columns retroactively if they don't exist
+  try {
+    await db.prepare('ALTER TABLE hotesse_clients ADD COLUMN civilite TEXT DEFAULT \'Mme\'').run();
+  } catch (_) {}
+  try {
+    await db.prepare('ALTER TABLE hotesse_clients ADD COLUMN ville TEXT').run();
+  } catch (_) {}
+  try {
+    await db.prepare('ALTER TABLE hotesse_clients ADD COLUMN code_postal TEXT').run();
+  } catch (_) {}
   try {
     await db.prepare('ALTER TABLE hotesse_clients ADD COLUMN type TEXT DEFAULT \'client\'').run();
     console.log('Added type column to hotesse_clients');

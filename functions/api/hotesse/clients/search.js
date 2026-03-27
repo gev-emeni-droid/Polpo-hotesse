@@ -45,26 +45,61 @@ async function handleGet(db, searchParams) {
     const query = searchParams.get('q')?.trim() || '';
     const limit = parseInt(searchParams.get('limit')) || 10;
 
-    if (!query || query.length < 1) {
+    if (!query || query.length < 2) {
       return new Response(JSON.stringify([]), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Search by nom or prenom
+    // Smart search: search by nom, prenom, AND telephone with intelligent matching
     const searchTerm = `%${query.toLowerCase()}%`;
+    
+    // Search with priority:
+    // 1. Exact matches on nom or prenom (highest priority)
+    // 2. LIKE matches on nom or prenom  
+    // 3. LIKE matches on telephone
     const result = await db.prepare(`
-      SELECT id, prenom, nom, telephone, mail, adresse_postale, entreprise
+      SELECT 
+        id, civilite, prenom, nom, telephone, mail, adresse_postale, ville, code_postal, entreprise,
+        -- Priority scoring for better sorting
+        CASE 
+          WHEN LOWER(nom) = ? THEN 1
+          WHEN LOWER(prenom) = ? THEN 1
+          WHEN LOWER(telephone) = ? THEN 2
+          WHEN LOWER(nom) LIKE ? THEN 3
+          WHEN LOWER(prenom) LIKE ? THEN 3
+          WHEN LOWER(telephone) LIKE ? THEN 4
+          ELSE 5
+        END as priority
       FROM hotesse_clients
-      WHERE LOWER(prenom) LIKE ? OR LOWER(nom) LIKE ?
-      ORDER BY nom ASC, prenom ASC
+      WHERE 
+        LOWER(prenom) LIKE ? 
+        OR LOWER(nom) LIKE ? 
+        OR LOWER(telephone) LIKE ?
+      ORDER BY priority ASC, nom ASC, prenom ASC
       LIMIT ?
-    `).bind(searchTerm, searchTerm, limit).all();
+    `).bind(
+      query.toLowerCase(),  // exact nom
+      query.toLowerCase(),  // exact prenom
+      query.toLowerCase(),  // exact telephone
+      searchTerm,          // like nom
+      searchTerm,          // like prenom
+      searchTerm,          // like telephone
+      searchTerm,          // where like prenom
+      searchTerm,          // where like nom
+      searchTerm,          // where like telephone
+      limit
+    ).all();
 
     const clients = result.results || [];
+    
+    // Remove priority field from response (internal only)
+    const cleanedClients = clients.map(({ priority, ...rest }) => rest);
 
-    return new Response(JSON.stringify(clients), {
+    console.log(`>>> Client search: query="${query}", found=${cleanedClients.length} clients`);
+
+    return new Response(JSON.stringify(cleanedClients), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });

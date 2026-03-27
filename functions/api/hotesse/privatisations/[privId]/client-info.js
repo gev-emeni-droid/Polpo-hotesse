@@ -2,11 +2,14 @@ const ensureSchema = async (db) => {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS hotesse_privatisations_client_info (
       priv_id TEXT PRIMARY KEY,
+      civilite TEXT,
       nom TEXT,
       prenom TEXT,
       mail TEXT,
       telephone TEXT,
       adresse_postale TEXT,
+      ville TEXT,
+      code_postal TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (priv_id) REFERENCES hotesse_privatisations(id) ON DELETE CASCADE
@@ -61,7 +64,7 @@ export async function onRequest(context) {
     const logs = [];
     try {
       const body = await request.json();
-      const { nom, prenom, mail, telephone, adresse_postale } = body;
+      const { civilite, nom, prenom, mail, telephone, adresse_postale, ville, code_postal } = body;
       const now = new Date().toISOString();
 
       logs.push(`>>> POST /client-info - Body received: ${JSON.stringify(body)}`);
@@ -80,17 +83,17 @@ export async function onRequest(context) {
         logs.push('>>> Updating existing client_info');
         await db.prepare(
           `UPDATE hotesse_privatisations_client_info 
-           SET nom = ?, prenom = ?, mail = ?, telephone = ?, adresse_postale = ?, updated_at = ?
+           SET civilite = ?, nom = ?, prenom = ?, mail = ?, telephone = ?, adresse_postale = ?, ville = ?, code_postal = ?, updated_at = ?
            WHERE priv_id = ?`
-        ).bind(nom, prenom, mail, telephone, adresse_postale, now, privId).run();
+        ).bind(civilite || 'Mme', nom, prenom, mail, telephone, adresse_postale, ville, code_postal, now, privId).run();
       } else {
         // Insert
         logs.push('>>> Inserting new client_info');
         await db.prepare(
           `INSERT INTO hotesse_privatisations_client_info 
-           (priv_id, nom, prenom, mail, telephone, adresse_postale, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(privId, nom, prenom, mail, telephone, adresse_postale, now, now).run();
+           (priv_id, civilite, nom, prenom, mail, telephone, adresse_postale, ville, code_postal, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(privId, civilite || 'Mme', nom, prenom, mail, telephone, adresse_postale, ville, code_postal, now, now).run();
       }
 
       // Automatically create or update clients in hotesse_clients table
@@ -131,9 +134,9 @@ export async function onRequest(context) {
             logs.push(`>>> Found existing client, updating: ${existingClient.id}`);
             await db.prepare(
               `UPDATE hotesse_clients 
-               SET telephone = ?, mail = ?, adresse_postale = ?, entreprise = ?, updated_at = ?
+               SET civilite = ?, telephone = ?, mail = ?, adresse_postale = ?, ville = ?, code_postal = ?, entreprise = ?, updated_at = ?
                WHERE id = ?`
-            ).bind(telephone || null, mail || null, adresse_postale || null, privName || null, now, existingClient.id).run();
+            ).bind(civilite || 'Mme', telephone || null, mail || null, adresse_postale || null, ville || null, code_postal || null, privName || null, now, existingClient.id).run();
             logs.push(`>>> Updated client: ${existingClient.id}`);
           } else {
             // Create new client
@@ -143,9 +146,9 @@ export async function onRequest(context) {
             
             const insertResult = await db.prepare(
               `INSERT INTO hotesse_clients 
-               (id, prenom, nom, telephone, mail, adresse_postale, entreprise, type, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, 'client', ?, ?)`
-            ).bind(clientId, prenom || null, nom, telephone || null, mail || null, adresse_postale || null, privName || null, now, now).run();
+               (id, civilite, prenom, nom, telephone, mail, adresse_postale, ville, code_postal, entreprise, type, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'client', ?, ?)`
+            ).bind(clientId, civilite || 'Mme', prenom || null, nom, telephone || null, mail || null, adresse_postale || null, ville || null, code_postal || null, privName || null, now, now).run();
             
             logs.push(`>>> INSERT result: ${JSON.stringify(insertResult)}`);
             logs.push(`>>> Created client (type=client): ${clientId}`);
