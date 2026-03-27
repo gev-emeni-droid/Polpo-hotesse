@@ -63,6 +63,9 @@ export async function onRequest(context) {
       const { nom, prenom, mail, telephone, adresse_postale } = body;
       const now = new Date().toISOString();
 
+      console.error('>>> POST /client-info - Body received:', body);
+      console.error('>>> Extracted values - nom:', JSON.stringify(nom), 'prenom:', JSON.stringify(prenom), 'telephone:', JSON.stringify(telephone));
+
       // Check if exists
       const existing = await db.prepare(
         `SELECT priv_id FROM hotesse_privatisations_client_info WHERE priv_id = ?`
@@ -86,7 +89,7 @@ export async function onRequest(context) {
 
       // Automatically create or update clients in hotesse_clients table
       if (nom) {
-        // Get privatisation name for entreprise client
+        console.error('>>> nom is truthy, proceeding with client creation');
         const privData = await db.prepare(
           `SELECT name FROM hotesse_privatisations WHERE id = ?`
         ).bind(privId).first();
@@ -188,6 +191,8 @@ export async function onRequest(context) {
         }
         
         console.error('>>> Client creation completed');
+      } else {
+        console.error('>>> nom is FALSY or empty - NO client creation:', { nom, nomType: typeof nom, length: nom?.length });
       }
 
       return new Response(JSON.stringify({ success: true, priv_id: privId }), {
