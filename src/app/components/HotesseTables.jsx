@@ -991,6 +991,22 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         if (res.ok) {
           const data = await res.json();
           console.log('API response data:', data);
+          
+          // 🔥 AUTO-CREATE ENTERPRISE if privatisation name provided
+          console.log('=== Calling auto-create-enterprise ===');
+          try {
+            const autoCreateRes = await fetch('/api/hotesse/privatisations/auto-create-enterprise', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ priv_name: name }),
+            });
+            const autoCreateData = await autoCreateRes.json();
+            console.log('Auto-create response:', autoCreateData);
+          } catch (autoErr) {
+            console.error('Auto-create error:', autoErr);
+          }
+          console.log('=== auto-create-enterprise completed ===');
+          
           console.log('=== Starting refetch ===');
           console.log('Refetching calendar ID:', selectedCalendar.id);
           // Recharger les données du calendrier depuis l'API pour être en sync

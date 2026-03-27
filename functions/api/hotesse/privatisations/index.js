@@ -98,44 +98,28 @@ export const onRequest = async ({ env, request }) => {
     }
     
     // AUTO-CREATE ENTREPRISE CLIENT if name is provided
-    // This MUST work every time a privatisation is created
     if (name && name.trim()) {
-      try {
-        debugLogs.push(`>>> AUTO-CREATE ENTREPRISE: Starting for name="${name}"`);
+      debugLogs.push(`>>> Auto-create: Checking if entreprise "${name}" exists`);
+      // Check if entreprise client already exists
+      const existing = await env.DB.prepare(
+        `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'entreprise'`
+      ).bind(name).first();
+      
+      if (!existing) {
+        debugLogs.push(`>>> Auto-create: ${name} does NOT exist, creating...`);
+        // Create new entreprise client (prenom and telephone can be NULL for entreprise)
+        const clientId = `client_${Math.random().toString(36).substr(2, 9)}`;
+        const insertResult = await env.DB.prepare(
+          `INSERT INTO hotesse_clients (id, nom, entreprise, type, prenom, telephone, created_at, updated_at)
+           VALUES (?, ?, ?, 'entreprise', NULL, NULL, datetime('now'), datetime('now'))`
+        ).bind(clientId, name, name).run();
         
-        // Check if entreprise client already exists
-        const existing = await env.DB.prepare(
-          `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'entreprise'`
-        ).bind(name).first();
-        
-        if (!existing) {
-          debugLogs.push(`>>> AUTO-CREATE: ${name} does NOT exist, creating...`);
-          // Create new entreprise client (prenom and telephone can be NULL for entreprise)
-          const clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-          
-          try {
-            const insertResult = await env.DB.prepare(
-              `INSERT INTO hotesse_clients (id, nom, entreprise, type, prenom, telephone, created_at, updated_at)
-               VALUES (?, ?, ?, 'entreprise', NULL, NULL, datetime('now'), datetime('now'))`
-            ).bind(clientId, name, name).run();
-            
-            debugLogs.push(`>>> AUTO-CREATE: ✅ Successfully created entreprise: ${clientId}`);
-            debugLogs.push(`>>> AUTO-CREATE: nom="${name}", type="entreprise"`);
-            debugLogs.push(`>>> AUTO-CREATE: DB meta changes: ${insertResult.meta?.changes || 0}`);
-          } catch (insertErr) {
-            debugLogs.push(`>>> AUTO-CREATE: ❌ INSERT failed: ${insertErr.message}`);
-            throw insertErr;
-          }
-        } else {
-          debugLogs.push(`>>> AUTO-CREATE: ✅ Entreprise already exists: ${existing.id}`);
-        }
-      } catch (autoCreateErr) {
-        debugLogs.push(`>>> AUTO-CREATE: ⚠️  Error during auto-create: ${autoCreateErr.message}`);
-        // Don't throw - allow privatisation to be created even if entreprise creation fails
-        console.error('>>> AUTO-CREATE ERROR (non-blocking):', autoCreateErr);
+        debugLogs.push(`>>> Auto-create: Successfully created entreprise client: ${clientId} (${name}), insert meta: ${JSON.stringify(insertResult.meta)}`);
+      } else {
+        debugLogs.push(`>>> Auto-create: Entreprise client already exists: ${existing.id} (${name})`);
       }
     } else {
-      debugLogs.push(`>>> AUTO-CREATE: Skipped - name is empty or null`);
+      debugLogs.push(`>>> Auto-create: No name provided, skipping entreprise creation`);
     }
     
     debugLogs.push(`>>> Save complete`);
