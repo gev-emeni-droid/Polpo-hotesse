@@ -204,7 +204,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         const res = await fetch('/api/hotesse/theme');
         const data = await res.json();
         if (data.ok && data.theme_id) {
-          console.log('Loaded global theme from API:', data.theme_id);
           setSelectedTheme(data.theme_id);
           const palette = COLOR_PALETTES.find(p => p.id === data.theme_id);
           if (palette) {
@@ -385,21 +384,13 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   // Recharger les données du calendrier sélectionné depuis l'API
   const refetchCalendar = async (calId) => {
     if (!calId) return;
-    console.log('=== refetchCalendar START ===');
-    console.log('Calendar ID:', calId);
-    console.log('Current calendars state before refetch:', calendars);
 
     try {
       const url = `/api/hotesse/calendars/${calId}`;
-      console.log('Fetching from:', url);
       const res = await fetch(url, { cache: 'no-store' });
-      console.log('API response status:', res.status);
 
       if (res.ok) {
         const updated = await res.json();
-        console.log('API returned data:', updated);
-        console.log('API returned privatisations:', updated.privatisations);
-        console.log('Privatisations count from API:', (updated.privatisations || []).length);
 
         // Normaliser les privatisations (prise_par -> prisePar)
         const normalizedPrivs = (updated.privatisations || []).map((p) => ({
@@ -419,15 +410,12 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                 // Source de vérité UI: longueur de la liste actuelle
                 priv_count: normalizedPrivs.length,
               };
-              console.log('Merged calendar object:', merged);
               return merged;
             }
             return c;
           });
-          console.log('Updated calendars state:', next);
           return next;
         });
-        console.log('=== refetchCalendar COMPLETED ===');
       } else {
         console.error('Refetch failed with status:', res.status);
         const errorText = await res.text();
@@ -543,18 +531,15 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
 
   const handleSaveTheme = async (themeId) => {
     try {
-      console.log('Saving GLOBAL theme:', themeId);
       const response = await fetch(`/api/hotesse/theme`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ theme_id: themeId })
       });
       const data = await response.json();
-      console.log('Theme save response:', data);
       setSelectedTheme(themeId);
       const palette = COLOR_PALETTES.find(p => p.id === themeId);
       if (palette) {
-        console.log('Applying palette:', palette.id);
         applyTheme(palette);
       }
     } catch (error) {
@@ -800,8 +785,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
             .then((res) => {
               if (!res.ok) {
                 console.error(`Failed to send email to ${contact.email}: ${res.status}`);
-              } else {
-                console.log(`Email sent to ${contact.email}`);
               }
             })
             .catch((error) => {
@@ -882,13 +865,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     const people = privPeople ? Number(privPeople) : null;
     const date = privDate.trim();
 
-    console.log('=== handleAddPrivatisation started ===');
-    console.log('Name:', name);
-    console.log('People:', people);
-    console.log('Date raw value:', privDate);
-    console.log('Date after trim:', date);
-    console.log('selectedCalendar:', selectedCalendar);
-
     if (!name || !date) {
       console.error('Missing required fields - name:', name, 'date:', date);
       return;
@@ -927,8 +903,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
       commentaire: commentValue,
     };
 
-    console.log('Priv object created:', priv);
-
     // Optimistic update — mise à jour immédiate de l'UI (privatisations + compteur)
     setCalendars(prev => prev.map(c => {
       if (c.id !== selectedCalendar.id) return c;
@@ -939,8 +913,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
 
       const baseCount = typeof c.priv_count === 'number' ? c.priv_count : existing.length;
       const nextPrivCount = editingPriv ? baseCount : baseCount + 1;
-
-      console.log('Optimistic update - new list:', updatedList, 'nextPrivCount:', nextPrivCount);
       return { ...c, privatisations: updatedList, priv_count: nextPrivCount };
     }));
 
@@ -974,41 +946,29 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         hostesses: Array.isArray(privHostesses) ? privHostesses : [],
       };
 
-      console.log('=== Sending API request ===');
-      console.log('Payload:', payload);
-      console.log('Date in payload:', date);
-
       try {
         const res = await fetch('/api/hotesse/privatisations', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        console.log('API response status:', res.status);
         if (res.ok) {
-          const data = await res.json();
-          console.log('API response data:', data);
+          await res.json();
           
           // 🔥 AUTO-CREATE ENTERPRISE if privatisation name provided
-          console.log('=== Calling auto-create-enterprise ===');
           try {
             const autoCreateRes = await fetch('/api/hotesse/privatisations/auto-create-enterprise', {
               method: 'POST',
               headers: { 'content-type': 'application/json' },
               body: JSON.stringify({ priv_name: name }),
             });
-            const autoCreateData = await autoCreateRes.json();
-            console.log('Auto-create response:', autoCreateData);
+            await autoCreateRes.json();
           } catch (autoErr) {
             console.error('Auto-create error:', autoErr);
           }
-          console.log('=== auto-create-enterprise completed ===');
-          
-          console.log('=== Starting refetch ===');
-          console.log('Refetching calendar ID:', selectedCalendar.id);
+
           // Recharger les données du calendrier depuis l'API pour être en sync
           await refetchCalendar(selectedCalendar.id);
-          console.log('=== Refetch completed ===');
         } else {
           console.error('API error - status:', res.status);
           const errorText = await res.text();
@@ -1048,7 +1008,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const handleDeletePrivatisation = (privId) => {
     if (!selectedCalendar) return;
     if (!window.confirm('Supprimer cette privatisation ?')) return;
-    console.log('handleDeletePrivatisation called with ID:', privId);
     // Optimistic update : retirer la privatisation et décrémenter le compteur
     setCalendars(prev => prev.map(c => {
       if (c.id !== selectedCalendar.id) return c;
@@ -1061,13 +1020,11 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
 
     (async () => {
       try {
-        console.log('Sending DELETE request for:', privId);
         const res = await fetch(`/api/hotesse/privatisations/delete`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ id: privId }),
         });
-        console.log('DELETE response status:', res.status);
         if (res.ok) {
           // Recharger les données après suppression
           await refetchCalendar(selectedCalendar.id);
@@ -1095,18 +1052,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     }
 
     try {
-      console.log('>>> [FRONTEND] About to save client info:');
-      console.log('>>> [FRONTEND] Payload:', {
-        civilite: clientCivilite,
-        nom: clientNom,
-        prenom: clientPrenom,
-        telephone: clientTelephone,
-        mail: clientMail,
-        adresse_postale: clientAdresse,
-        ville: clientVille,
-        code_postal: clientCodePostal
-      });
-      
       // Save client info to privatisation
       const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/client-info`, {
         method: 'POST',
@@ -1129,17 +1074,12 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         return;
       }
 
-      const responseData = await res.json();
-      if (responseData.debug_logs) {
-        console.log('>>> [BACKEND RESPONSE LOGS]:', responseData.debug_logs.join('\n'));
-        responseData.debug_logs.forEach(log => console.log(log));
-      }
+      await res.json();
 
       // Backend (client-info.js) handles client creation automatically
       // No need to sync from frontend
       
       alert('✅ Infos client enregistrées avec succès !');
-      console.log('Client info saved successfully');
       
       // Clear form
       setClientCivilite('Mme');
@@ -1180,8 +1120,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         });
 
         if (res.ok) {
-          const data = await res.json();
-          console.log('Document uploaded:', data);
+          await res.json();
           // Recharger la liste des documents
           const docsRes = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/documents`);
           const docs = await docsRes.json();
