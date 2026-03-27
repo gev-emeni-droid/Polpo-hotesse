@@ -397,7 +397,7 @@ export default function ClientsPage() {
                           disabled={loadingDetails}
                           title="Supprimer ce client"
                         >
-                          🗑️
+                          ×
                         </button>
                       </div>
                     </td>
