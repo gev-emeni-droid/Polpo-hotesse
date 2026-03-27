@@ -43,11 +43,35 @@ export async function onRequest(context) {
   if (method === 'GET') {
     return handleGet(db, clientId);
   }
+
+  if (method === 'DELETE') {
+    return handleDelete(db, clientId);
+  }
   
   return new Response(JSON.stringify({ error: 'Method not allowed' }), {
     status: 405,
     headers: { 'Content-Type': 'application/json' }
   });
+}
+
+async function handleDelete(db, clientId) {
+  try {
+    // Delete the client
+    const result = await db.prepare(
+      `DELETE FROM hotesse_clients WHERE id = ?`
+    ).bind(clientId).run();
+
+    return new Response(JSON.stringify({ success: true, deleted: result.meta?.changes || 0 }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Error deleting client:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 }
 
 async function handleGet(db, clientId) {
@@ -65,12 +89,24 @@ async function handleGet(db, clientId) {
     }
 
     // Get all privatisations for this client
-    const privs = await db.prepare(`
-      SELECT p.* FROM hotesse_privatisations p
-      INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
-      WHERE pci.nom = ? AND pci.prenom = ? AND pci.telephone = ?
-      ORDER BY p.date DESC
-    `).bind(client.nom, client.prenom, client.telephone).all();
+    // Handle both cases: with prenom and without (NULL prenom)
+    let privs;
+    if (client.prenom) {
+      privs = await db.prepare(`
+        SELECT p.* FROM hotesse_privatisations p
+        INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
+        WHERE pci.nom = ? AND pci.prenom = ? AND pci.telephone = ?
+        ORDER BY p.date DESC
+      `).bind(client.nom, client.prenom, client.telephone).all();
+    } else {
+      // If prenom is NULL, search without it
+      privs = await db.prepare(`
+        SELECT p.* FROM hotesse_privatisations p
+        INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
+        WHERE pci.nom = ? AND pci.prenom IS NULL AND pci.telephone = ?
+        ORDER BY p.date DESC
+      `).bind(client.nom, client.telephone).all();
+    }
 
     const privatisations = [];
     for (const priv of privs.results || []) {

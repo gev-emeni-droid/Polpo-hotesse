@@ -98,6 +98,27 @@ export default function ClientsPage() {
     }
   };
 
+  const handleDeleteClient = async (clientId) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/hotesse/clients/${clientId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete client');
+
+      // Refresh the clients list
+      fetchClients(page);
+      alert('Client supprimé avec succès');
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      alert('Erreur lors de la suppression du client');
+    }
+  };
+
   const handleExport = async () => {
     try {
       const response = await fetch('/api/hotesse/clients/export');
@@ -361,14 +382,24 @@ export default function ClientsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => fetchClientDetails(client.id)}
-                        style={{ backgroundColor: themeColor }}
-                        className="px-3 py-1 text-white rounded text-sm hover:opacity-90 transition-opacity disabled:opacity-50 font-medium"
-                        disabled={loadingDetails}
-                      >
-                        Voir
-                      </button>
+                      <div className="flex gap-2 justify-center">
+                        <button
+                          onClick={() => fetchClientDetails(client.id)}
+                          style={{ backgroundColor: themeColor }}
+                          className="px-3 py-1 text-white rounded text-sm hover:opacity-90 transition-opacity disabled:opacity-50 font-medium"
+                          disabled={loadingDetails}
+                        >
+                          Voir
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClient(client.id)}
+                          className="px-3 py-1 text-white rounded text-sm hover:opacity-90 transition-opacity disabled:opacity-50 font-medium bg-red-600 hover:bg-red-700"
+                          disabled={loadingDetails}
+                          title="Supprimer ce client"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
