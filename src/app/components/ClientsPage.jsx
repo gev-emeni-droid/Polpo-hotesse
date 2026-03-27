@@ -393,11 +393,11 @@ export default function ClientsPage() {
                         </button>
                         <button
                           onClick={() => handleDeleteClient(client.id)}
-                          className="px-3 py-1 text-white rounded text-sm hover:opacity-90 transition-opacity disabled:opacity-50 font-medium bg-red-600 hover:bg-red-700"
+                          className="px-2 py-1 text-base text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
                           disabled={loadingDetails}
                           title="Supprimer ce client"
                         >
-                          ×
+                          🗑
                         </button>
                       </div>
                     </td>
