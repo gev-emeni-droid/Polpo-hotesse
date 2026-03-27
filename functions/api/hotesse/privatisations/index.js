@@ -99,23 +99,27 @@ export const onRequest = async ({ env, request }) => {
     
     // AUTO-CREATE ENTREPRISE CLIENT if name is provided
     if (name && name.trim()) {
+      debugLogs.push(`>>> Auto-create: Checking if entreprise "${name}" exists`);
       // Check if entreprise client already exists
       const existing = await env.DB.prepare(
         `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'entreprise'`
       ).bind(name).first();
       
       if (!existing) {
+        debugLogs.push(`>>> Auto-create: ${name} does NOT exist, creating...`);
         // Create new entreprise client (prenom and telephone can be NULL for entreprise)
         const clientId = `client_${Math.random().toString(36).substr(2, 9)}`;
-        await env.DB.prepare(
+        const insertResult = await env.DB.prepare(
           `INSERT INTO hotesse_clients (id, nom, entreprise, type, prenom, telephone, created_at, updated_at)
            VALUES (?, ?, ?, 'entreprise', NULL, NULL, datetime('now'), datetime('now'))`
         ).bind(clientId, name, name).run();
         
-        debugLogs.push(`>>> Created entreprise client: ${clientId} (${name})`);
+        debugLogs.push(`>>> Auto-create: Successfully created entreprise client: ${clientId} (${name}), insert meta: ${JSON.stringify(insertResult.meta)}`);
       } else {
-        debugLogs.push(`>>> Entreprise client already exists: ${existing.id}`);
+        debugLogs.push(`>>> Auto-create: Entreprise client already exists: ${existing.id} (${name})`);
       }
+    } else {
+      debugLogs.push(`>>> Auto-create: No name provided, skipping entreprise creation`);
     }
     
     debugLogs.push(`>>> Save complete`);

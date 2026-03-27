@@ -73,7 +73,7 @@ async function handleGet(db, clientId) {
       });
     }
 
-    console.log(`>>> Fetching privatisations for client: ${clientId}, type: ${client.type}, nom: ${client.nom}, entreprise: ${client.entreprise}`);
+    console.log(`>>> Fetching privatisations for client: ${clientId}, type: ${client.type}, nom: ${client.nom}, prenom: ${client.prenom}, telephone: ${client.telephone}`);
 
     // Get all privatisations for this client based on type
     let privResults = [];
@@ -90,42 +90,65 @@ async function handleGet(db, clientId) {
       privResults = privs.results || [];
       console.log(`>>> Found ${privResults.length} privatisations for entreprise`);
     } else {
-      // For personal clients: search ONLY in client_info table by their personal info
-      console.log(`>>> Searching privatisations by client info name: ${client.nom}`);
+      // For personal clients: search in client_info table AND ALSO search by matching nom/prenom/telephone
+      console.log(`>>> Searching privatisations for personal client: nom=${client.nom}, prenom=${client.prenom}, tel=${client.telephone}`);
       
-      let privs;
-      if (client.prenom && client.telephone) {
-        privs = await db.prepare(`
-          SELECT p.* FROM hotesse_privatisations p
-          INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
-          WHERE pci.nom = ? AND pci.prenom = ? AND pci.telephone = ?
-          ORDER BY p.date DESC
-        `).bind(client.nom, client.prenom, client.telephone).all();
-      } else if (client.prenom) {
-        privs = await db.prepare(`
-          SELECT p.* FROM hotesse_privatisations p
-          INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
-          WHERE pci.nom = ? AND pci.prenom = ?
-          ORDER BY p.date DESC
-        `).bind(client.nom, client.prenom).all();
-      } else if (client.telephone) {
-        privs = await db.prepare(`
-          SELECT p.* FROM hotesse_privatisations p
-          INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
-          WHERE pci.nom = ? AND pci.telephone = ?
-          ORDER BY p.date DESC
-        `).bind(client.nom, client.telephone).all();
-      } else {
-        privs = await db.prepare(`
-          SELECT p.* FROM hotesse_privatisations p
-          INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
-          WHERE pci.nom = ?
-          ORDER BY p.date DESC
-        `).bind(client.nom).all();
+      // Build dynamic WHERE clause based on available fields
+      let whereConditions = [];
+      let bindings = [];
+      
+      if (client.nom) {
+        whereConditions.push('pci.nom = ?');
+        bindings.push(client.nom);
+      }
+      if (client.prenom) {
+        whereConditions.push('pci.prenom = ?');
+        bindings.push(client.prenom);
+      }
+      if (client.telephone) {
+        whereConditions.push('pci.telephone = ?');
+        bindings.push(client.telephone);
       }
       
-      privResults = privs.results || [];
-      console.log(`>>> Found ${privResults.length} privatisations for personal client (by client_info only)`);
+      let whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
+      
+      // Method 1: Search in privatisations_client_info (where info was explicitly saved)
+      console.log(`>>> Method 1 WHERE clause: ${whereClause}`);
+      let query1 = `
+        SELECT DISTINCT p.* FROM hotesse_privatisations p
+        INNER JOIN hotesse_privatisations_client_info pci ON p.id = pci.priv_id
+        ${whereClause}
+        ORDER BY p.date DESC
+      `;
+      
+      const method1Results = await db.prepare(query1).bind(...bindings).all();
+      const privsByClientInfo = method1Results.results || [];
+      console.log(`>>> Method 1 found ${privsByClientInfo.length} privatisations in client_info`);
+      
+      // Method 2: Also search by name match in privatisations table itself (fallback for unlinked privats)
+      // This handles cases where client participated but info wasn't explicitly saved
+      if (client.nom) {
+        console.log(`>>> Method 2: Also searching for privatisations by name fallback: ${client.nom}`);
+        const method2Results = await db.prepare(`
+          SELECT * FROM hotesse_privatisations
+          WHERE name LIKE ?
+          AND id NOT IN (SELECT priv_id FROM hotesse_privatisations_client_info WHERE nom = ?)
+          ORDER BY date DESC
+        `).bind(`%${client.nom}%`, client.nom).all();
+        
+        const privsByNameFallback = method2Results.results || [];
+        console.log(`>>> Method 2 found ${privsByNameFallback.length} privatisations by name fallback`);
+        
+        // Merge results (Method 1 takes precedence, Method 2 adds extras)
+        privResults = [
+          ...privsByClientInfo,
+          ...privsByNameFallback.filter(p => !privsByClientInfo.some(pci => pci.id === p.id))
+        ];
+      } else {
+        privResults = privsByClientInfo;
+      }
+      
+      console.log(`>>> Total: ${privResults.length} privatisations for personal client`);
     }
 
     // Fetch documents for each privatisation
