@@ -84,35 +84,61 @@ export async function onRequest(context) {
         ).bind(privId, nom, prenom, mail, telephone, adresse_postale, now, now).run();
       }
 
-      // Automatically create clients in hotesse_clients table
+      // Automatically create or update clients in hotesse_clients table
       if (nom) {
         // Get privatisation name for entreprise client
         const privData = await db.prepare(
           `SELECT name FROM hotesse_privatisations WHERE id = ?`
         ).bind(privId).first();
         const privName = privData?.name;
+        const now = new Date().toISOString();
 
-        // 1. Create/update client (type = "client") with personal info
-        const clientId = `client_${crypto.randomUUID()}`;
+        // 1. Create or UPDATE client (type = "client") with personal info
         try {
-          await db.prepare(
-            `INSERT INTO hotesse_clients 
-             (id, prenom, nom, telephone, mail, adresse_postale, entreprise, type, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'client', ?, ?)`
-          ).bind(clientId, prenom || null, nom, telephone || null, mail || null, adresse_postale || null, privName || null, now, now).run();
-          console.log('Created client (type=client):', clientId);
+          // Check if client exists by prenom+nom+telephone
+          const existingClient = await db.prepare(
+            `SELECT id FROM hotesse_clients WHERE prenom = ? AND nom = ? AND type = 'client'`
+          ).bind(prenom || null, nom).first();
+
+          if (existingClient) {
+            // Update existing client
+            await db.prepare(
+              `UPDATE hotesse_clients 
+               SET telephone = ?, mail = ?, adresse_postale = ?, entreprise = ?, updated_at = ?
+               WHERE id = ?`
+            ).bind(telephone || null, mail || null, adresse_postale || null, privName || null, now, existingClient.id).run();
+            console.log('Updated client:', existingClient.id);
+          } else {
+            // Create new client
+            const clientId = `client_${crypto.randomUUID()}`;
+            await db.prepare(
+              `INSERT INTO hotesse_clients 
+               (id, prenom, nom, telephone, mail, adresse_postale, entreprise, type, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'client', ?, ?)`
+            ).bind(clientId, prenom || null, nom, telephone || null, mail || null, adresse_postale || null, privName || null, now, now).run();
+            console.log('Created client (type=client):', clientId);
+          }
         } catch (err) {
-          console.error('Error creating client:', err);
+          console.error('Error creating/updating client:', err);
         }
 
-        // 2. Create entreprise client from privatisation name if not exists
+        // 2. Create or UPDATE entreprise client from privatisation name
         if (privName) {
           try {
             const existingEntreprise = await db.prepare(
               `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'entreprise'`
             ).bind(privName).first();
 
-            if (!existingEntreprise) {
+            if (existingEntreprise) {
+              // Update existing entreprise (in case name changed elsewhere)
+              await db.prepare(
+                `UPDATE hotesse_clients 
+                 SET entreprise = ?, updated_at = ?
+                 WHERE id = ?`
+              ).bind(privName, now, existingEntreprise.id).run();
+              console.log('Updated entreprise:', existingEntreprise.id);
+            } else {
+              // Create new entreprise
               const entrepriseId = `client_${crypto.randomUUID()}`;
               await db.prepare(
                 `INSERT INTO hotesse_clients 
@@ -122,7 +148,7 @@ export async function onRequest(context) {
               console.log('Created entreprise:', entrepriseId);
             }
           } catch (err) {
-            console.error('Error creating entreprise:', err);
+            console.error('Error creating/updating entreprise:', err);
           }
         }
       }

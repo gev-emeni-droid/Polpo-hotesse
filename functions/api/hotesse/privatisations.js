@@ -34,6 +34,17 @@ export const onRequestPost = async ({ env, request }) => {
 
     const privId = id && typeof id === 'string' ? id : `priv_${crypto.randomUUID()}`;
 
+    // Check if privatisation already exists to detect name changes
+    let oldName = null;
+    try {
+      const existing = await env.DB.prepare(
+        `SELECT name FROM hotesse_privatisations WHERE id = ?`
+      ).bind(privId).first();
+      oldName = existing?.name;
+    } catch (err) {
+      console.error('Error fetching old privatisation:', err);
+    }
+
     await env.DB.prepare(
       `INSERT INTO hotesse_privatisations (id, calendar_id, name, people, date, start, end, period, color, prise_par, commentaire)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -63,6 +74,29 @@ export const onRequestPost = async ({ env, request }) => {
         commentaire || null,
       )
       .run();
+
+    // If privatisation name changed, update the corresponding entreprise record
+    if (oldName && oldName !== name) {
+      try {
+        // Check if old entreprise exists
+        const oldEntreprise = await env.DB.prepare(
+          `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'entreprise'`
+        ).bind(oldName).first();
+
+        if (oldEntreprise) {
+          // Update the entreprise name
+          const now = new Date().toISOString();
+          await env.DB.prepare(
+            `UPDATE hotesse_clients 
+             SET nom = ?, entreprise = ?, updated_at = ?
+             WHERE id = ?`
+          ).bind(name, name, now, oldEntreprise.id).run();
+          console.log('Updated entreprise name from', oldName, 'to', name);
+        }
+      } catch (err) {
+        console.error('Error updating entreprise name:', err);
+      }
+    }
 
     // Synchroniser la table de jointure hôtesses
     await env.DB.prepare('DELETE FROM hotesse_privatisations_hostesses WHERE priv_id = ?')
