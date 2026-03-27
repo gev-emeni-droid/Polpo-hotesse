@@ -112,29 +112,8 @@ export const onRequestPost = async ({ env, request }) => {
       }
     }
 
-    // Automatically create entreprise client from privatisation name
-    if (name) {
-      try {
-        const now = new Date().toISOString();
-        const clientId = `client_${crypto.randomUUID()}`;
-        
-        // Check if entreprise with this nom exists
-        const existingClient = await env.DB.prepare(
-          "SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'entreprise'"
-        ).bind(name).first();
-        
-        if (!existingClient) {
-          // Insert new entreprise client
-          await env.DB.prepare(
-            `INSERT INTO hotesse_clients 
-             (id, nom, entreprise, type, created_at, updated_at)
-             VALUES (?, ?, ?, 'entreprise', ?, ?)`
-          ).bind(clientId, name, name, now, now).run();
-        }
-      } catch (err) {
-        console.error('Warning: Failed to create entreprise from privatisation:', err);
-      }
-    }
+    // Note: Client creation happens only when user saves client info via /client-info endpoint
+    // Do NOT create clients automatically here
 
     return new Response(JSON.stringify({ id: privId }), {
       status: 200,
