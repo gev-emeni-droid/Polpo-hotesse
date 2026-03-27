@@ -69,8 +69,11 @@ export async function onRequest(context) {
 
       // Check if exists
       const existing = await db.prepare(
-        `SELECT priv_id FROM hotesse_privatisations_client_info WHERE priv_id = ?`
+        `SELECT * FROM hotesse_privatisations_client_info WHERE priv_id = ?`
       ).bind(privId).first();
+
+      // Store OLD nom before updating (to potentially remove client association)
+      const oldNom = existing?.nom;
 
       if (existing) {
         // Update
@@ -91,7 +94,7 @@ export async function onRequest(context) {
       }
 
       // Automatically create or update clients in hotesse_clients table
-      if (nom) {
+      if (nom && nom.trim()) {  // nom exists and is not just whitespace
         logs.push('>>> nom is truthy, proceeding with client creation');
         const privData = await db.prepare(
           `SELECT name FROM hotesse_privatisations WHERE id = ?`
@@ -190,7 +193,25 @@ export async function onRequest(context) {
         
         logs.push('>>> Client creation completed');
       } else {
-        logs.push(`>>> nom is FALSY or empty - NO client creation: nom=${JSON.stringify(nom)}`);
+        logs.push(`>>> nom is EMPTY or whitespace - REMOVING client association: nom=${JSON.stringify(nom)}`);
+        
+        // If there was a previous nom, remove the entreprise association from that client
+        if (oldNom && oldNom.trim()) {
+          try {
+            logs.push(`>>> Removing entreprise association from old client: ${oldNom}`);
+            
+            // Update client to remove entreprise (but keep the client itself)
+            const updateResult = await db.prepare(
+              `UPDATE hotesse_clients 
+               SET entreprise = NULL, updated_at = ?
+               WHERE nom = ? AND type = 'client' AND prenom IS NULL`
+            ).bind(now, oldNom).run();
+            
+            logs.push(`>>> Updated clients, removed entreprise from ${updateResult.meta?.changes || 0} records`);
+          } catch (err) {
+            logs.push(`>>> ERROR removing entreprise association: ${err.message}`);
+          }
+        }
       }
 
       return new Response(JSON.stringify({ success: true, priv_id: privId, debug_logs: logs }), {
