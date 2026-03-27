@@ -97,11 +97,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [clientVille, setClientVille] = useState('');
   const [clientCodePostal, setClientCodePostal] = useState('');
   
-  // Autocomplete state for clients
-  const [clientSearchResults, setClientSearchResults] = useState([]);
-  const [showClientSearch, setShowClientSearch] = useState(false);
-  const [clientSearchQuery, setClientSearchQuery] = useState('');
-
   // Autocomplete state for enterprises (in priv name field)
   const [enterpriseSearchResults, setEnterpriseSearchResults] = useState([]);
   const [showEnterpriseSearch, setShowEnterpriseSearch] = useState(false);
@@ -1153,7 +1148,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
       setClientAdresse('');
       setClientVille('');
       setClientCodePostal('');
-      setClientSearchQuery('');
     } catch (err) {
       alert('❌ Erreur lors de l\'enregistrement: ' + err.message);
       console.error('Error saving client info:', err);
@@ -1224,42 +1218,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     } catch (err) {
       console.error('Error downloading document:', err);
     }
-  };
-
-  // Search for existing clients by nom/prenom
-  const searchClients = async (query) => {
-    if (!query.trim() || query.length < 1) {
-      setClientSearchResults([]);
-      setShowClientSearch(false);
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/hotesse/clients/search?q=${encodeURIComponent(query)}&limit=10`);
-      if (!res.ok) throw new Error('Search failed');
-      
-      const clients = await res.json();
-      setClientSearchResults(clients || []);
-      setShowClientSearch(clients.length > 0);
-    } catch (err) {
-      console.error('Error searching clients:', err);
-      setClientSearchResults([]);
-    }
-  };
-
-  // Select a client from search results
-  const selectClient = (client) => {
-    setClientCivilite(client.civilite || 'Mme');
-    setClientNom(client.nom);
-    setClientPrenom(client.prenom);
-    setClientMail(client.mail || '');
-    setClientTelephone(client.telephone || '');
-    setClientAdresse(client.adresse_postale || '');
-    setClientVille(client.ville || '');
-    setClientCodePostal(client.code_postal || '');
-    setClientSearchQuery('');
-    setShowClientSearch(false);
-    setClientSearchResults([]);
   };
 
   // Search enterprises (type='entreprise') for privacy name auto-completion
@@ -2874,49 +2832,8 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
               {/* Onglet Infos client */}
               {privModalActiveTab === 'infos_client' && (
                 <div className="space-y-4 mb-6">
-                  {/* Auto-search Section */}
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-2 font-medium">🔍 RECHERCHER UN CLIENT EXISTANT</label>
-                    <p className="text-xs text-gray-500 mb-2">Tapez le début du NOM, PRÉNOM ou N° TÉLÉPHONE</p>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Ex: Mar, Dupont, 06 ou 0612..."
-                        className="w-full border-2 border-blue-300 rounded-lg px-3 py-2 text-sm bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        value={clientSearchQuery}
-                        onChange={(e) => {
-                          setClientSearchQuery(e.target.value);
-                          searchClients(e.target.value);
-                        }}
-                        onFocus={() => clientSearchQuery.trim().length >= 2 && searchClients(clientSearchQuery)}
-                      />
-                      {showClientSearch && clientSearchResults.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-blue-300 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                          <div className="p-2 text-xs font-medium text-gray-600 border-b border-gray-200">Clients correspondants :</div>
-                          {clientSearchResults.map((client) => (
-                            <button
-                              key={client.id}
-                              type="button"
-                              onClick={() => selectClient(client)}
-                              className="w-full text-left px-3 py-2.5 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 text-sm transition-colors"
-                            >
-                              <div className="font-medium text-gray-800">{client.civilite || '—'} {client.prenom} {client.nom}</div>
-                              <div className="text-xs text-gray-600">📞 {client.telephone || '—'}</div>
-                              {client.mail && <div className="text-xs text-gray-500">✉️ {client.mail}</div>}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {showClientSearch && clientSearchQuery.trim().length < 2 && (
-                        <div className="absolute top-full left-0 right-0 mt-1 bg-yellow-50 border border-yellow-200 rounded-lg p-2 z-50 text-xs text-yellow-700">
-                          Tapez au moins 2 caractères...
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="border-t-2 border-gray-200 my-4 pt-4">
-                    <p className="text-xs text-gray-600 mb-3">Remplissez les champs du client (NOM + PRÉNOM + TÉLÉPHONE sont obligatoires)</p>
+                  <div className="border-b-2 border-gray-200 pb-3">
+                    <p className="text-xs text-gray-600">Remplissez les champs du client (NOM + PRÉNOM + TÉLÉPHONE sont obligatoires)</p>
                   </div>
 
                   {/* Civilité */}
