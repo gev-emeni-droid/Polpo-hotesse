@@ -192,6 +192,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [notifChannelById, setNotifChannelById] = useState({});
   const [editingNotifId, setEditingNotifId] = useState(null);
   const [hideMailUpdateNotice, setHideMailUpdateNotice] = useLocalStorage('hotesse_hide_mail_update_notice_v1', false);
+  const [showMailUpdateModal, setShowMailUpdateModal] = useState(true);
 
   // Paramètres : préfixe du titre du calendrier sélectionné
   const [settingsTitlePrefix, setSettingsTitlePrefix] = useState('');
@@ -1703,24 +1704,44 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         {/* Générateur de calendriers (page actifs) */}
         {!isFullPage && !archivesMode && (
           <section className="mt-4">
-            {!hideMailUpdateNotice && (
-              <div className="mb-5 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-                <p className="text-sm text-blue-900 leading-relaxed">
-                  <strong>Nouvelle mise à jour :</strong> le bouton "Envoyer une notification" envoie désormais l'e-mail automatiquement.
-                  Vous n'avez plus besoin d'ouvrir votre messagerie pour l'envoyer manuellement.
-                </p>
-                <label className="mt-3 inline-flex items-center gap-2 text-sm text-blue-900 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-blue-300"
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setHideMailUpdateNotice(true);
-                      }
-                    }}
-                  />
-                  Ne plus afficher ce message
-                </label>
+            {!hideMailUpdateNotice && showMailUpdateModal && (
+              <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/45 px-4">
+                <div className="w-full max-w-xl rounded-xl bg-white shadow-2xl border border-gray-200 p-6">
+                  <h3 className="text-lg font-bold text-gray-900">Nouvelle mise a jour</h3>
+                  <p className="mt-3 text-sm text-gray-700 leading-relaxed">
+                    Le bouton "Envoyer une notification" envoie desormais l'e-mail automatiquement.
+                    Vous n'avez plus besoin d'ouvrir votre messagerie pour l'envoyer manuellement.
+                  </p>
+
+                  <label className="mt-4 inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300"
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setHideMailUpdateNotice(true);
+                        }
+                      }}
+                    />
+                    Ne plus afficher ce message
+                  </label>
+
+                  <div className="mt-5 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowMailUpdateModal(false)}
+                      className="font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+                      style={{
+                        backgroundColor: 'var(--color-primary)',
+                        color: 'var(--color-text-on-primary)',
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--color-primary-dark)'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--color-primary)'}
+                    >
+                      Compris
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
