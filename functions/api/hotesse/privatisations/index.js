@@ -7,8 +7,11 @@ const corsHeaders = {
 };
 
 export const onRequest = async ({ env, request }) => {
+  console.log('>>> Privatisations index.js - method:', request.method, 'URL:', request.url);
+  
   // Handle CORS preflight
   if (request.method === 'OPTIONS') {
+    console.log('>>> Handling OPTIONS');
     return new Response(null, {
       status: 200,
       headers: corsHeaders,
@@ -17,6 +20,7 @@ export const onRequest = async ({ env, request }) => {
 
   // Only allow POST
   if (request.method !== 'POST') {
+    console.log('>>> Method not allowed:', request.method);
     return new Response(JSON.stringify({ error: 'method not allowed' }), {
       status: 405,
       headers: {
@@ -27,10 +31,11 @@ export const onRequest = async ({ env, request }) => {
   }
 
   try {
+    console.log('>>> Starting POST handler');
     await ensureHotesseSchema(env.DB);
     
     const body = await request.json().catch(() => ({}));
-    console.log('Privatisation POST received:', body);
+    console.log('>>> Privatisation POST received:', body);
     
     const {
       id,
@@ -115,17 +120,18 @@ export const onRequest = async ({ env, request }) => {
     
     debugLogs.push(`>>> Save complete`);
     
-    return new Response(JSON.stringify({ success: true, debug_logs: debugLogs }), {
-      status: 201,
+    console.log('>>> Returning successful response with', debugLogs.length, 'logs');
+    return new Response(JSON.stringify({ id, success: true, debug_logs: debugLogs }), {
+      status: 200,
       headers: {
         'content-type': 'application/json',
         ...corsHeaders,
       },
     });
   } catch (e) {
-    console.error('Error in privatisations POST:', e.message);
-    console.error('Stack:', e.stack);
-    return new Response(JSON.stringify({ error: e.message || 'error' }), {
+    console.error('>>> Error in privatisations POST:', e.message);
+    console.error('>>> Stack:', e.stack);
+    return new Response(JSON.stringify({ error: e.message || 'error', success: false }), {
       status: 500,
       headers: {
         'content-type': 'application/json',
