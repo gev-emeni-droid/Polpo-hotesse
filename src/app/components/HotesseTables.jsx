@@ -1068,6 +1068,13 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     }
 
     try {
+      // Log what we're about to send
+      console.log('>>> [FRONTEND] About to save client info:');
+      console.log('>>> [FRONTEND] clientNom:', JSON.stringify(clientNom), 'isEmpty:', clientNom === '', 'isFalsy:', !clientNom);
+      console.log('>>> [FRONTEND] clientPrenom:', JSON.stringify(clientPrenom), 'isEmpty:', clientPrenom === '', 'isFalsy:', !clientPrenom);
+      console.log('>>> [FRONTEND] clientTelephone:', JSON.stringify(clientTelephone), 'isEmpty:', clientTelephone === '', 'isFalsy:', !clientTelephone);
+      console.log('>>> [FRONTEND] Full payload:', { nom: clientNom, prenom: clientPrenom, mail: clientMail, telephone: clientTelephone, adresse_postale: clientAdresse });
+      
       // Save client info to privatisation
       const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/client-info`, {
         method: 'POST',
