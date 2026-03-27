@@ -100,11 +100,11 @@ export const onRequest = async ({ env, request }) => {
       ).bind(name).first();
       
       if (!existing) {
-        // Create new entreprise client
+        // Create new entreprise client (prenom and telephone can be NULL for entreprise)
         const clientId = `client_${Math.random().toString(36).substr(2, 9)}`;
         await env.DB.prepare(
-          `INSERT INTO hotesse_clients (id, nom, entreprise, type, created_at, updated_at)
-           VALUES (?, ?, ?, 'entreprise', datetime('now'), datetime('now'))`
+          `INSERT INTO hotesse_clients (id, nom, entreprise, type, prenom, telephone, created_at, updated_at)
+           VALUES (?, ?, ?, 'entreprise', NULL, NULL, datetime('now'), datetime('now'))`
         ).bind(clientId, name, name).run();
         
         debugLogs.push(`>>> Created entreprise client: ${clientId} (${name})`);

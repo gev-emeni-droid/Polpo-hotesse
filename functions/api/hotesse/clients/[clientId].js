@@ -1,19 +1,4 @@
-const ensureSchema = async (db) => {
-  await db.prepare(`
-    CREATE TABLE IF NOT EXISTS hotesse_clients (
-      id TEXT PRIMARY KEY,
-      prenom TEXT NOT NULL,
-      nom TEXT NOT NULL,
-      telephone TEXT NOT NULL,
-      mail TEXT,
-      adresse_postale TEXT,
-      entreprise TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      UNIQUE(prenom, nom, telephone)
-    );
-  `).run();
-};
+import { ensureHotesseSchema } from '../schema.js';
 
 export async function onRequest(context) {
   const { request } = context;
@@ -33,7 +18,7 @@ export async function onRequest(context) {
   const db = context.env.DB;
   
   try {
-    await ensureSchema(db);
+    await ensureHotesseSchema(db);
   } catch (error) {
     console.error('Error ensuring schema:', error);
   }
