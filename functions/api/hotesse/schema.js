@@ -164,4 +164,47 @@ export const ensureHotesseSchema = async (db) => {
     // Column already exists, that's OK
     console.log('type column already exists or migration skipped');
   }
+
+  // Automatically create entreprise clients for all existing privatisations
+  try {
+    console.log('Starting migration of privatisation entreprises to clients table...');
+    const privs = await db.prepare('SELECT id, name FROM hotesse_privatisations WHERE name IS NOT NULL').all();
+    const privatisations = privs.results || [];
+    
+    let created = 0;
+    let skipped = 0;
+    
+    for (const priv of privatisations) {
+      try {
+        const name = priv.name?.trim();
+        if (!name) continue;
+        
+        // Check if entreprise with this nom exists
+        const existing = await db.prepare(
+          "SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'entreprise'"
+        ).bind(name).first();
+        
+        if (!existing) {
+          // Create it
+          const id = `client_${crypto.randomUUID()}`;
+          const now = new Date().toISOString();
+          await db.prepare(
+            `INSERT INTO hotesse_clients 
+             (id, nom, entreprise, type, created_at, updated_at)
+             VALUES (?, ?, ?, 'entreprise', ?, ?)`
+          ).bind(id, name, name, now, now).run();
+          created++;
+          console.log('Created entreprise client:', name);
+        } else {
+          skipped++;
+        }
+      } catch (err) {
+        console.error('Error creating client for privatisation:', priv.name, err);
+      }
+    }
+    
+    console.log(`Privatisation migration complete. Created: ${created}, Skipped: ${skipped}`);
+  } catch (err) {
+    console.error('Error during privatisation migration:', err);
+  }
 };
