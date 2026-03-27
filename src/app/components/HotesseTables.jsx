@@ -191,6 +191,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [newNotifPhone, setNewNotifPhone] = useState('');
   const [notifChannelById, setNotifChannelById] = useState({});
   const [editingNotifId, setEditingNotifId] = useState(null);
+  const [hideMailUpdateNotice, setHideMailUpdateNotice] = useLocalStorage('hotesse_hide_mail_update_notice_v1', false);
 
   // Paramètres : préfixe du titre du calendrier sélectionné
   const [settingsTitlePrefix, setSettingsTitlePrefix] = useState('');
@@ -1702,6 +1703,27 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         {/* Générateur de calendriers (page actifs) */}
         {!isFullPage && !archivesMode && (
           <section className="mt-4">
+            {!hideMailUpdateNotice && (
+              <div className="mb-5 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                <p className="text-sm text-blue-900 leading-relaxed">
+                  <strong>Nouvelle mise à jour :</strong> le bouton "Envoyer une notification" envoie désormais l'e-mail automatiquement.
+                  Vous n'avez plus besoin d'ouvrir votre messagerie pour l'envoyer manuellement.
+                </p>
+                <label className="mt-3 inline-flex items-center gap-2 text-sm text-blue-900 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-blue-300"
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setHideMailUpdateNotice(true);
+                      }
+                    }}
+                  />
+                  Ne plus afficher ce message
+                </label>
+              </div>
+            )}
+
             <div className="flex flex-col items-center mb-6 gap-5">
               <div className="flex justify-center items-center gap-3 flex-wrap">
                 <button
