@@ -1,19 +1,4 @@
-const ensureSchema = async (db) => {
-  await db.prepare(`
-    CREATE TABLE IF NOT EXISTS hotesse_clients (
-      id TEXT PRIMARY KEY,
-      prenom TEXT,
-      nom TEXT NOT NULL,
-      telephone TEXT,
-      mail TEXT,
-      adresse_postale TEXT,
-      entreprise TEXT,
-      type TEXT DEFAULT 'client',
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-  `).run();
-};
+import { ensureHotesseSchema } from '../schema.js';
 
 export async function onRequest(context) {
   const { request } = context;
@@ -23,7 +8,7 @@ export async function onRequest(context) {
   const db = context.env.DB;
   
   try {
-    await ensureSchema(db);
+    await ensureHotesseSchema(db);
   } catch (error) {
     console.error('Error ensuring schema:', error);
   }
@@ -46,28 +31,57 @@ export async function onRequest(context) {
 
 async function handleGet(db, searchParams) {
   try {
-    console.error('=== GET /clients START ===');
-    // Simple: just return all clients, no complex params
-    const result = await db.prepare(`
+    // Get search and filter parameters
+    const searchTerm = (searchParams.get('search') || '').trim().toLowerCase();
+    const typeFilter = (searchParams.get('type') || '').trim();
+    const pageNum = parseInt(searchParams.get('page') || '1', 10);
+    const pageSize = 30;
+
+    console.log(`>>> GET /clients - search: "${searchTerm}", type: "${typeFilter}", page: ${pageNum}`);
+
+    // Build WHERE clause
+    let whereConditions = [];
+    let bindParams = [];
+
+    if (searchTerm) {
+      // Search in nom or prenom (case-insensitive)
+      whereConditions.push(`(LOWER(nom) LIKE ? OR LOWER(prenom) LIKE ?)`);
+      bindParams.push(`%${searchTerm}%`, `%${searchTerm}%`);
+    }
+
+    if (typeFilter && (typeFilter === 'client' || typeFilter === 'entreprise')) {
+      whereConditions.push(`type = ?`);
+      bindParams.push(typeFilter);
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+    // Get total count
+    const countQuery = `SELECT COUNT(*) as count FROM hotesse_clients ${whereClause}`;
+    const countResult = await db.prepare(countQuery).bind(...bindParams).first();
+    const total = countResult?.count || 0;
+
+    // Get paginated results
+    const offset = (pageNum - 1) * pageSize;
+    const query = `
       SELECT id, prenom, nom, telephone, mail, adresse_postale, entreprise, type, created_at, updated_at
       FROM hotesse_clients
+      ${whereClause}
       ORDER BY type DESC, nom ASC, prenom ASC
-    `).all();
-
-    const clients = result.results || [];
-    console.error('Clients found in DB:', clients.length);
-    console.error('Client data:', JSON.stringify(clients, null, 2));
+      LIMIT ? OFFSET ?
+    `;
     
-    const total = clients.length;
-    const page = 1;
-    const pageSize = 30;
+    const result = await db.prepare(query).bind(...bindParams, pageSize, offset).all();
+    const clients = result.results || [];
+
     const totalPages = Math.ceil(total / pageSize);
 
-    console.error('=== GET /clients END - Returning:', total, 'clients ===');
+    console.log(`>>> GET /clients - Found ${clients.length} clients (total: ${total})`);
+
     return new Response(JSON.stringify({
       clients,
       total,
-      page,
+      page: pageNum,
       pageSize,
       totalPages
     }), {
@@ -91,7 +105,7 @@ async function handlePost(db, request) {
     const body = await request.json();
     const { prenom, nom, telephone, mail, adresse_postale, entreprise, type = 'client' } = body;
 
-    console.error('POST /clients - Received:', { prenom, nom, telephone, mail, type });
+    console.log('>>> POST /clients - Received:', { prenom, nom, telephone, mail, type });
 
     // nom is required
     if (!nom) {
@@ -108,13 +122,13 @@ async function handlePost(db, request) {
     
     if (type === 'entreprise') {
       // For entreprise: only check by nom to avoid duplicates
-      console.error('Checking existing entreprise by nom:', nom);
+      console.log('>>> Checking existing entreprise by nom:', nom);
       existing = await db.prepare(
         `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'entreprise'`
       ).bind(nom).first();
     } else {
       // For client: check by prenom + nom + telephone to keep different people separate
-      console.error('Checking existing client by prenom/nom/telephone:', { prenom, nom, telephone });
+      console.log('>>> Checking existing client by prenom/nom/telephone:', { prenom, nom, telephone });
       
       if (prenom && telephone) {
         existing = await db.prepare(
@@ -131,11 +145,11 @@ async function handlePost(db, request) {
       }
     }
 
-    console.error('Existing check result:', existing ? 'Found' : 'Not found');
+    console.log('>>> Existing check result:', existing ? 'Found - ' + existing.id : 'Not found');
 
     if (existing) {
       // Update
-      console.error('Updating client:', existing.id);
+      console.log('>>> Updating client:', existing.id);
       await db.prepare(
         `UPDATE hotesse_clients 
          SET mail = ?, adresse_postale = ?, entreprise = ?, updated_at = ?
@@ -149,21 +163,21 @@ async function handlePost(db, request) {
     } else {
       // Insert
       const id = crypto.randomUUID();
-      console.error('Inserting new client:', { id, prenom, nom, telephone, type });
+      console.log('>>> Inserting new client:', { id, prenom, nom, telephone, type });
       await db.prepare(
         `INSERT INTO hotesse_clients 
          (id, prenom, nom, telephone, mail, adresse_postale, entreprise, type, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(id, prenom || null, nom, telephone || null, mail || null, adresse_postale || null, entreprise || null, type, now, now).run();
 
-      console.error('Client inserted successfully:', id);
+      console.log('>>> Client inserted successfully:', id);
       return new Response(JSON.stringify({ success: true, id, action: 'created' }), {
         status: 201,
         headers: { 'Content-Type': 'application/json' }
       });
     }
   } catch (error) {
-    console.error('Error saving client:', error.message, error.stack);
+    console.error('>>> Error saving client:', error.message, error.stack);
     return new Response(JSON.stringify({ 
       error: error.message,
       details: error.toString()
