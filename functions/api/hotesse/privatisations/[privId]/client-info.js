@@ -208,9 +208,25 @@ export async function onRequest(context) {
 
   if (request.method === 'DELETE') {
     try {
+      // Get the client info to know which client to update
+      const clientInfo = await db.prepare(
+        `SELECT nom FROM hotesse_privatisations_client_info WHERE priv_id = ?`
+      ).bind(privId).first();
+
+      // Delete the client info record
       await db.prepare(
         `DELETE FROM hotesse_privatisations_client_info WHERE priv_id = ?`
       ).bind(privId).run();
+
+      // If there was a client associated, remove the entreprise association from the client
+      if (clientInfo?.nom) {
+        // Update the client to remove entreprise association (but keep the client itself)
+        await db.prepare(
+          `UPDATE hotesse_clients 
+           SET entreprise = NULL, updated_at = ?
+           WHERE nom = ? AND type = 'client' AND prenom IS NULL`
+        ).bind(new Date().toISOString(), clientInfo.nom).run();
+      }
 
       return new Response(JSON.stringify({ success: true }), {
         status: 200,
