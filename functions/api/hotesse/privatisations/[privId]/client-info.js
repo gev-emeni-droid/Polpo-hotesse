@@ -58,13 +58,14 @@ export async function onRequest(context) {
   }
 
   if (request.method === 'POST' || request.method === 'PUT') {
+    const logs = [];
     try {
       const body = await request.json();
       const { nom, prenom, mail, telephone, adresse_postale } = body;
       const now = new Date().toISOString();
 
-      console.error('>>> POST /client-info - Body received:', body);
-      console.error('>>> Extracted values - nom:', JSON.stringify(nom), 'prenom:', JSON.stringify(prenom), 'telephone:', JSON.stringify(telephone));
+      logs.push(`>>> POST /client-info - Body received: ${JSON.stringify(body)}`);
+      logs.push(`>>> Extracted values - nom: ${JSON.stringify(nom)}, prenom: ${JSON.stringify(prenom)}, telephone: ${JSON.stringify(telephone)}`);
 
       // Check if exists
       const existing = await db.prepare(
@@ -73,6 +74,7 @@ export async function onRequest(context) {
 
       if (existing) {
         // Update
+        logs.push('>>> Updating existing client_info');
         await db.prepare(
           `UPDATE hotesse_privatisations_client_info 
            SET nom = ?, prenom = ?, mail = ?, telephone = ?, adresse_postale = ?, updated_at = ?
@@ -80,6 +82,7 @@ export async function onRequest(context) {
         ).bind(nom, prenom, mail, telephone, adresse_postale, now, privId).run();
       } else {
         // Insert
+        logs.push('>>> Inserting new client_info');
         await db.prepare(
           `INSERT INTO hotesse_privatisations_client_info 
            (priv_id, nom, prenom, mail, telephone, adresse_postale, created_at, updated_at)
@@ -89,18 +92,13 @@ export async function onRequest(context) {
 
       // Automatically create or update clients in hotesse_clients table
       if (nom) {
-        console.error('>>> nom is truthy, proceeding with client creation');
+        logs.push('>>> nom is truthy, proceeding with client creation');
         const privData = await db.prepare(
           `SELECT name FROM hotesse_privatisations WHERE id = ?`
         ).bind(privId).first();
         const privName = privData?.name;
-        const now = new Date().toISOString();
 
-        console.error('>>> Starting client creation for privatisation:', privId);
-        console.error('>>> privName:', privName);
-        console.error('>>> nom:', nom);
-        console.error('>>> prenom:', prenom);
-        console.error('>>> telephone:', telephone);
+        logs.push(`>>> privName: ${privName}, nom: ${nom}, prenom: ${prenom}, telephone: ${telephone}`);
 
         // 1. Create or UPDATE client (type = "client") with personal info
         try {
@@ -109,17 +107,17 @@ export async function onRequest(context) {
           
           // Build dynamic query based on available fields
           if (prenom && telephone) {
-            console.error('>>> Query: Search by prenom + nom + telephone');
+            logs.push('>>> Query: Search by prenom + nom + telephone');
             existingClient = await db.prepare(
               `SELECT id FROM hotesse_clients WHERE prenom = ? AND nom = ? AND telephone = ? AND type = 'client'`
             ).bind(prenom, nom, telephone).first();
           } else if (prenom) {
-            console.error('>>> Query: Search by prenom + nom');
+            logs.push('>>> Query: Search by prenom + nom');
             existingClient = await db.prepare(
               `SELECT id FROM hotesse_clients WHERE prenom = ? AND nom = ? AND type = 'client'`
             ).bind(prenom, nom).first();
           } else {
-            console.error('>>> Query: Search by nom only (no prenom)');
+            logs.push('>>> Query: Search by nom only (no prenom)');
             existingClient = await db.prepare(
               `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'client' AND prenom IS NULL`
             ).bind(nom).first();
@@ -127,18 +125,18 @@ export async function onRequest(context) {
 
           if (existingClient) {
             // Update existing client
-            console.error('>>> Found existing client, updating:', existingClient.id);
+            logs.push(`>>> Found existing client, updating: ${existingClient.id}`);
             await db.prepare(
               `UPDATE hotesse_clients 
                SET telephone = ?, mail = ?, adresse_postale = ?, entreprise = ?, updated_at = ?
                WHERE id = ?`
             ).bind(telephone || null, mail || null, adresse_postale || null, privName || null, now, existingClient.id).run();
-            console.error('>>> Updated client:', existingClient.id);
+            logs.push(`>>> Updated client: ${existingClient.id}`);
           } else {
             // Create new client
             const clientId = `client_${crypto.randomUUID()}`;
-            console.error('>>> No existing client found, creating new one:', clientId);
-            console.error('>>> INSERT VALUES:', { clientId, prenom: prenom || null, nom, telephone: telephone || null, mail: mail || null, adresse_postale: adresse_postale || null, entreprise: privName || null, type: 'client', created_at: now, updated_at: now });
+            logs.push(`>>> No existing client found, creating new one: ${clientId}`);
+            logs.push(`>>> INSERT VALUES: ${JSON.stringify({ clientId, prenom: prenom || null, nom, telephone: telephone || null, mail: mail || null, adresse_postale: adresse_postale || null, entreprise: privName || null, type: 'client' })}`);
             
             const insertResult = await db.prepare(
               `INSERT INTO hotesse_clients 
@@ -146,35 +144,35 @@ export async function onRequest(context) {
                VALUES (?, ?, ?, ?, ?, ?, ?, 'client', ?, ?)`
             ).bind(clientId, prenom || null, nom, telephone || null, mail || null, adresse_postale || null, privName || null, now, now).run();
             
-            console.error('>>> INSERT result:', insertResult);
-            console.error('>>> Created client (type=client):', clientId);
+            logs.push(`>>> INSERT result: ${JSON.stringify(insertResult)}`);
+            logs.push(`>>> Created client (type=client): ${clientId}`);
           }
         } catch (err) {
-          console.error('>>> ERROR creating/updating client:', err.message, err);
+          logs.push(`>>> ERROR creating/updating client: ${err.message}`);
         }
 
         // 2. Create or UPDATE entreprise client from privatisation name
         if (privName) {
           try {
-            console.error('>>> Checking for existing entreprise:', privName);
+            logs.push(`>>> Checking for existing entreprise: ${privName}`);
             const existingEntreprise = await db.prepare(
               `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'entreprise'`
             ).bind(privName).first();
 
             if (existingEntreprise) {
-              console.error('>>> Found existing entreprise, updating:', existingEntreprise.id);
+              logs.push(`>>> Found existing entreprise, updating: ${existingEntreprise.id}`);
               // Update existing entreprise (in case name changed elsewhere)
               await db.prepare(
                 `UPDATE hotesse_clients 
                  SET entreprise = ?, updated_at = ?
                  WHERE id = ?`
               ).bind(privName, now, existingEntreprise.id).run();
-              console.error('>>> Updated entreprise:', existingEntreprise.id);
+              logs.push(`>>> Updated entreprise: ${existingEntreprise.id}`);
             } else {
-              console.error('>>> No existing entreprise found, creating new one');
+              logs.push('>>> No existing entreprise found, creating new one');
               // Create new entreprise
               const entrepriseId = `client_${crypto.randomUUID()}`;
-              console.error('>>> INSERT entreprise VALUES:', { entrepriseId, nom: privName, entreprise: privName, type: 'entreprise', created_at: now, updated_at: now });
+              logs.push(`>>> INSERT entreprise VALUES: ${JSON.stringify({ entrepriseId, nom: privName, entreprise: privName, type: 'entreprise' })}`);
               
               const insertResult = await db.prepare(
                 `INSERT INTO hotesse_clients 
@@ -182,20 +180,20 @@ export async function onRequest(context) {
                  VALUES (?, ?, ?, 'entreprise', ?, ?)`
               ).bind(entrepriseId, privName, privName, now, now).run();
               
-              console.error('>>> INSERT result:', insertResult);
-              console.error('>>> Created entreprise:', entrepriseId);
+              logs.push(`>>> INSERT result: ${JSON.stringify(insertResult)}`);
+              logs.push(`>>> Created entreprise: ${entrepriseId}`);
             }
           } catch (err) {
-            console.error('>>> ERROR creating/updating entreprise:', err.message, err);
+            logs.push(`>>> ERROR creating/updating entreprise: ${err.message}`);
           }
         }
         
-        console.error('>>> Client creation completed');
+        logs.push('>>> Client creation completed');
       } else {
-        console.error('>>> nom is FALSY or empty - NO client creation:', { nom, nomType: typeof nom, length: nom?.length });
+        logs.push(`>>> nom is FALSY or empty - NO client creation: nom=${JSON.stringify(nom)}`);
       }
 
-      return new Response(JSON.stringify({ success: true, priv_id: privId }), {
+      return new Response(JSON.stringify({ success: true, priv_id: privId, debug_logs: logs }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });

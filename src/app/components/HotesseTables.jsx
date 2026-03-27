@@ -1094,6 +1094,12 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         return;
       }
 
+      const responseData = await res.json();
+      if (responseData.debug_logs) {
+        console.log('>>> [BACKEND RESPONSE LOGS]:', responseData.debug_logs.join('\n'));
+        responseData.debug_logs.forEach(log => console.log(log));
+      }
+
       // Backend (client-info.js) handles client creation automatically
       // No need to sync from frontend
       
