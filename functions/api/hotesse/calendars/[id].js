@@ -9,7 +9,16 @@ export const onRequestGet = async ({ env, params }) => {
   if (!calendar) return new Response(null, { status: 404 });
 
   const privs = await env.DB.prepare(
-    'SELECT id, calendar_id, name, people, date, start, end, period, color, prise_par, commentaire FROM hotesse_privatisations WHERE calendar_id = ? ORDER BY date ASC'
+    `SELECT p.id, p.calendar_id, p.name, p.people, p.date, p.start, p.end, p.period, p.color, p.prise_par, p.commentaire,
+            pm.message AS message,
+            CASE WHEN pm.message IS NOT NULL AND TRIM(pm.message) <> '' THEN 1 ELSE 0 END AS has_message,
+            CASE WHEN EXISTS (
+              SELECT 1 FROM hotesse_privatisations_documents d WHERE d.priv_id = p.id
+            ) THEN 1 ELSE 0 END AS has_documents
+     FROM hotesse_privatisations p
+     LEFT JOIN hotesse_privatisations_messages pm ON pm.priv_id = p.id
+     WHERE p.calendar_id = ?
+     ORDER BY p.date ASC`
   ).bind(id).all();
 
   // Fetch hostesses for each privatisation

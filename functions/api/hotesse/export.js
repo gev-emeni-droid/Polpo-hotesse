@@ -19,6 +19,7 @@ export const onRequestGet = async ({ env }) => {
       'hotesse_theme_settings',
       'hotesse_privatisations_client_info',
       'hotesse_privatisations_documents',
+      'hotesse_privatisations_messages',
       'hotesse_clients'
     ];
 

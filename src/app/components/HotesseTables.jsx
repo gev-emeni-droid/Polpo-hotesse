@@ -85,7 +85,9 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
   const [privComment, setPrivComment] = useState('');
 
   // Onglets du modal de privatisation
-  const [privModalActiveTab, setPrivModalActiveTab] = useState('general'); // 'general' | 'infos_client' | 'documents'
+  const [privModalActiveTab, setPrivModalActiveTab] = useState('general'); // 'general' | 'documents' | 'message'
+  const [privMode, setPrivMode] = useState('entreprise'); // 'entreprise' | 'prv'
+  const [isClientInfoOpen, setIsClientInfoOpen] = useState(false);
 
   // Form state pour Infos client
   const [clientCivilite, setClientCivilite] = useState('Mme'); // Mme, M., Autre
@@ -104,7 +106,11 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
 
   // Form state pour Documents
   const [privDocuments, setPrivDocuments] = useState([]);
+  const [pendingDocuments, setPendingDocuments] = useState([]);
+  const [pendingDeletedDocumentIds, setPendingDeletedDocumentIds] = useState([]);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [privMessage, setPrivMessage] = useState('');
+  const [viewingPrivMessage, setViewingPrivMessage] = useState(null);
 
   // State pour éditier une privatisation
   const [editingPriv, setEditingPriv] = useState(null);
@@ -137,8 +143,16 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
       setClientMail('');
       setClientTelephone('');
       setClientAdresse('');
+      setClientVille('');
+      setClientCodePostal('');
+      setClientCivilite('Mme');
       setPrivDocuments([]);
+      setPendingDocuments([]);
+      setPendingDeletedDocumentIds([]);
+      setPrivMessage('');
       setPrivModalActiveTab('general');
+      setPrivMode('entreprise');
+      setIsClientInfoOpen(false);
       return;
     }
 
@@ -148,11 +162,26 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/client-info`);
         const data = await res.json();
         if (data && data.nom !== undefined) {
+          setClientCivilite(data.civilite || 'Mme');
           setClientNom(data.nom || '');
           setClientPrenom(data.prenom || '');
           setClientMail(data.mail || '');
           setClientTelephone(data.telephone || '');
           setClientAdresse(data.adresse_postale || '');
+          setClientVille(data.ville || '');
+          setClientCodePostal(data.code_postal || '');
+
+          if (data.priv_mode === 'prv' || data.priv_mode === 'entreprise') {
+            setPrivMode(data.priv_mode);
+          } else {
+            // Legacy fallback for rows created before priv_mode existed.
+            const inferredPrvName = `${(data.prenom || '').trim()} ${(data.nom || '').trim()}`.trim();
+            const currentPrivName = String(editingPriv?.name || '').trim();
+            const inferredMode = inferredPrvName && currentPrivName && inferredPrvName === currentPrivName
+              ? 'prv'
+              : 'entreprise';
+            setPrivMode(inferredMode);
+          }
         }
       } catch (err) {
         console.error('Error loading client info:', err);
@@ -167,6 +196,16 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         setPrivDocuments(Array.isArray(docs) ? docs : []);
       } catch (err) {
         console.error('Error loading documents:', err);
+      }
+    })();
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/message`);
+        const data = await res.json();
+        setPrivMessage(data?.message || '');
+      } catch (err) {
+        console.error('Error loading privatisation message:', err);
       }
     })();
   }, [editingPriv]);
@@ -436,6 +475,15 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     }
   };
 
+  const openPrivMessage = (priv) => {
+    const message = typeof priv?.message === 'string' ? priv.message.trim() : '';
+    if (!message) return;
+    setViewingPrivMessage({
+      title: priv.name || 'Message privatisation',
+      message,
+    });
+  };
+
   const handleCreateCalendar = (e) => {
     e.preventDefault();
     if (!newMonth || !newYear) return;
@@ -697,10 +745,19 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
+
+          // Préserver la transparence pour les PNG, sinon fond blanc pour JPEG
+          const isPng = file.type === 'image/png';
+          if (!isPng) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, width, height);
+          }
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Convertir en Base64 avec qualité réduite pour email
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.75);
+          // Conserver PNG si transparent, sinon JPEG compressé
+          const compressedBase64 = isPng
+            ? canvas.toDataURL('image/png')
+            : canvas.toDataURL('image/jpeg', 0.75);
           setCustomLogo(compressedBase64);
           // Sauvegarder en BD
           saveLogo(compressedBase64);
@@ -867,13 +924,24 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     })();
   };
 
-  const handleAddPrivatisation = (e) => {
-    e.preventDefault();
+  const submitPrivatisation = () => {
     if (!selectedCalendar) return;
 
-    const name = privName.trim();
     const people = privPeople ? Number(privPeople) : null;
     const date = privDate.trim();
+    const messageValue = privMessage.trim();
+
+    // PRV mode : valider les infos client et utiliser Prénom+Nom comme nom d'affichage
+    let name;
+    if (privMode === 'prv') {
+      if (!clientNom.trim() || !clientPrenom.trim() || !clientTelephone.trim()) {
+        alert('En mode PRV : NOM, PRÉNOM et TÉLÉPHONE du client sont obligatoires.');
+        return;
+      }
+      name = `${clientPrenom.trim()} ${clientNom.trim()}`;
+    } else {
+      name = privName.trim();
+    }
 
     if (!name || !date) {
       console.error('Missing required fields - name:', name, 'date:', date);
@@ -897,6 +965,8 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     const commentValue = Number.isFinite(commentNumber) && commentNumber > 0
       ? `${commentNumber} Hôtesse`
       : null;
+    const pendingDocsForUpload = Array.isArray(pendingDocuments) ? [...pendingDocuments] : [];
+    const pendingDocsForDeletion = Array.isArray(pendingDeletedDocumentIds) ? [...pendingDeletedDocumentIds] : [];
 
     const priv = {
       id: privId,
@@ -911,6 +981,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
       color: privColor === 'violet' ? 'violet' : 'bleu',
       period: computedPeriod,
       commentaire: commentValue,
+      message: messageValue || null,
     };
 
     // Optimistic update — mise à jour immédiate de l'UI (privatisations + compteur)
@@ -927,15 +998,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     }));
 
     // Réinitialiser le formulaire immédiatement
-    setPrivName('');
-    setPrivPeople('');
-    setPrivHostesses([]);
-    setPrivStart('');
-    setPrivEnd('');
-    setPrivPrisePar('');
-    setPrivDate('');
-    setPrivColor('bleu');
-    setPrivComment('');
+    resetPrivatisationForm();
     setEditingPriv(null);
     setIsPrivModalOpen(false);
 
@@ -964,18 +1027,12 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         });
         if (res.ok) {
           await res.json();
-          
-          // 🔥 AUTO-CREATE ENTERPRISE if privatisation name provided
-          try {
-            const autoCreateRes = await fetch('/api/hotesse/privatisations/auto-create-enterprise', {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ priv_name: name }),
-            });
-            await autoCreateRes.json();
-          } catch (autoErr) {
-            console.error('Auto-create error:', autoErr);
-          }
+
+          // Sauvegarder les infos client si renseignées
+          await saveClientInfoForPriv(privId, privMode);
+          await savePrivMessageForPriv(privId, messageValue);
+          await uploadPendingDocumentsForPriv(privId, pendingDocsForUpload);
+          await deletePendingDocumentsForPriv(privId, pendingDocsForDeletion);
 
           // Recharger les données du calendrier depuis l'API pour être en sync
           await refetchCalendar(selectedCalendar.id);
@@ -988,6 +1045,63 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
         console.error('Fetch error:', err);
       }
     })();
+  };
+
+  const handleAddPrivatisation = (e) => {
+    e.preventDefault();
+    submitPrivatisation();
+  };
+
+  const resetPrivatisationForm = () => {
+    setPrivName('');
+    setPrivPeople('');
+    setPrivHostesses([]);
+    setPrivStart('');
+    setPrivEnd('');
+    setPrivPrisePar('');
+    setPrivDate('');
+    setPrivColor('bleu');
+    setPrivComment('');
+    setPrivMessage('');
+    setPrivMode('entreprise');
+    setIsClientInfoOpen(false);
+
+    setClientCivilite('Mme');
+    setClientNom('');
+    setClientPrenom('');
+    setClientMail('');
+    setClientTelephone('');
+    setClientAdresse('');
+    setClientVille('');
+    setClientCodePostal('');
+
+    setPrivDocuments([]);
+    setPendingDocuments([]);
+    setPendingDeletedDocumentIds([]);
+    setPrivModalActiveTab('general');
+    setShowEnterpriseSearch(false);
+    setEnterpriseSearchResults([]);
+    setEnterpriseSearchQuery('');
+    prevHostessCountRef.current = 0;
+  };
+
+  const openCreatePrivatisationModal = () => {
+    setEditingPriv(null);
+    resetPrivatisationForm();
+    setIsPrivModalOpen(true);
+    setIsSettingsOpen(false);
+  };
+
+  const handleCancelPrivatisationModal = () => {
+    const confirmMessage = editingPriv
+      ? 'Annuler les modifications en cours ? Les changements non enregistrés seront perdus.'
+      : 'Annuler l\'ajout de cette privatisation ? Les informations saisies seront perdues.';
+
+    if (!window.confirm(confirmMessage)) return;
+
+    resetPrivatisationForm();
+    setEditingPriv(null);
+    setIsPrivModalOpen(false);
   };
 
   const handleEditPrivatisation = (priv) => {
@@ -1004,6 +1118,8 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     setPrivPrisePar(priv.prisePar || '');
     setPrivDate(priv.date || '');
     setPrivColor(priv.color === 'violet' ? 'violet' : 'bleu');
+    setPrivMessage(priv.message || '');
+    setPrivModalActiveTab('general');
     const rawComment = priv.commentaire || '';
     const matchNumber = rawComment.match(/(\d+)/);
     setPrivComment(matchNumber ? matchNumber[1] : '');
@@ -1106,9 +1222,47 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     }
   };
 
+  // Sauvegarder les infos client pour n'importe quel privId (add ou edit)
+  const saveClientInfoForPriv = async (privId, mode) => {
+    if (!clientNom.trim() || !clientPrenom.trim() || !clientTelephone.trim()) return;
+    try {
+      await fetch(`/api/hotesse/privatisations/${encodeURIComponent(privId)}/client-info`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          civilite: clientCivilite,
+          nom: clientNom.trim(),
+          prenom: clientPrenom.trim(),
+          mail: clientMail,
+          telephone: clientTelephone.trim(),
+          adresse_postale: clientAdresse,
+          ville: clientVille,
+          code_postal: clientCodePostal,
+          priv_mode: mode || 'entreprise',
+        }),
+      });
+    } catch (err) {
+      console.error('Error saving client info for priv:', err);
+    }
+  };
+
+  const savePrivMessageForPriv = async (privId, messageText) => {
+    try {
+      await fetch(`/api/hotesse/privatisations/${encodeURIComponent(privId)}/message`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          message: typeof messageText === 'string' ? messageText.trim() : '',
+        }),
+      });
+    } catch (err) {
+      console.error('Error saving privatisation message:', err);
+    }
+  };
+
   // Upload un document pour une privatisation
   const handleUploadDocument = async (file) => {
-    if (!editingPriv || !editingPriv.id || !file) return;
+    if (!file) return;
 
     setIsUploadingDoc(true);
 
@@ -1118,26 +1272,18 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
       reader.onload = async (e) => {
         const base64Data = e.target.result.split(',')[1]; // Récupérer la partie Base64
 
-        const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/documents`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
+        const pendingId = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        setPendingDocuments(prev => ([
+          ...prev,
+          {
+            id: pendingId,
             file_name: file.name,
             file_data: base64Data,
             mime_type: file.type,
-            uploaded_by: 'current_user' // À remplacer par l'utilisateur actuel si disponible
-          })
-        });
-
-        if (res.ok) {
-          await res.json();
-          // Recharger la liste des documents
-          const docsRes = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/documents`);
-          const docs = await docsRes.json();
-          setPrivDocuments(Array.isArray(docs) ? docs : []);
-        } else {
-          console.error('Failed to upload document:', res.status);
-        }
+            file_size: file.size,
+            uploaded_at: new Date().toISOString(),
+          },
+        ]));
 
         setIsUploadingDoc(false);
       };
@@ -1145,6 +1291,41 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
     } catch (err) {
       console.error('Error uploading document:', err);
       setIsUploadingDoc(false);
+    }
+  };
+
+  const uploadPendingDocumentsForPriv = async (privId, docs) => {
+    if (!privId || !Array.isArray(docs) || docs.length === 0) return;
+
+    for (const doc of docs) {
+      try {
+        await fetch(`/api/hotesse/privatisations/${encodeURIComponent(privId)}/documents`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            file_name: doc.file_name,
+            file_data: doc.file_data,
+            mime_type: doc.mime_type,
+            uploaded_by: 'current_user',
+          }),
+        });
+      } catch (err) {
+        console.error('Error uploading queued document:', err);
+      }
+    }
+  };
+
+  const deletePendingDocumentsForPriv = async (privId, docIds) => {
+    if (!privId || !Array.isArray(docIds) || docIds.length === 0) return;
+
+    for (const docId of docIds) {
+      try {
+        await fetch(`/api/hotesse/privatisations/${encodeURIComponent(privId)}/documents?doc_id=${encodeURIComponent(docId)}`, {
+          method: 'DELETE',
+        });
+      } catch (err) {
+        console.error('Error deleting queued document:', err);
+      }
     }
   };
 
@@ -1202,25 +1383,13 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
 
   // Supprimer un document
   const handleDeleteDocument = async (docId) => {
-    if (!editingPriv || !editingPriv.id) return;
-    if (!window.confirm('Supprimer ce document ?')) return;
-
-    try {
-      const res = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/documents?doc_id=${encodeURIComponent(docId)}`, {
-        method: 'DELETE'
-      });
-
-      if (res.ok) {
-        // Recharger la liste des documents
-        const docsRes = await fetch(`/api/hotesse/privatisations/${encodeURIComponent(editingPriv.id)}/documents`);
-        const docs = await docsRes.json();
-        setPrivDocuments(Array.isArray(docs) ? docs : []);
-      } else {
-        console.error('Failed to delete document:', res.status);
-      }
-    } catch (err) {
-      console.error('Error deleting document:', err);
+    if (String(docId).startsWith('pending_')) {
+      setPendingDocuments(prev => prev.filter(doc => doc.id !== docId));
+      return;
     }
+
+    if (!window.confirm('Retirer ce document de la privatisation ? La suppression sera appliquée seulement après clic sur Ajouter ou Modifier.')) return;
+    setPendingDeletedDocumentIds(prev => (prev.includes(docId) ? prev : [...prev, docId]));
   };
 
   // Export Excel du calendrier sélectionné
@@ -2076,7 +2245,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   <>
                     <button
                       type="button"
-                      onClick={() => { setEditingPriv(null); setIsPrivModalOpen(true); setIsSettingsOpen(false); }}
+                      onClick={openCreatePrivatisationModal}
                       className="font-semibold py-2 px-4 rounded-lg transition-colors text-xs"
                       style={{
                         backgroundColor: 'var(--color-primary)',
@@ -2233,47 +2402,74 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                                       ? [priv.hostess]
                                       : [];
                                   return (
-                                    <div
-                                      key={priv.id}
-                                      className={`w-full rounded-md px-2 py-1 text-[12px] text-white text-center relative ${priv.color === 'violet'
-                                        ? 'bg-purple-500'
-                                        : 'bg-blue-500'
-                                        } break-words`}
-                                    >
-                                      {!isReadOnly && (
-                                        <div className="absolute top-1 right-1 flex gap-1 text-[10px]">
-                                          <button
-                                            type="button"
-                                            className="text-white/80 hover:text-white"
-                                            onClick={() => handleEditPrivatisation(priv)}
-                                            aria-label="Modifier la privatisation"
-                                          >
-                                            ✎
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="text-white/80 hover:text-white"
-                                            onClick={() => handleDeletePrivatisation(priv.id)}
-                                            aria-label="Supprimer la privatisation"
-                                          >
-                                            🗑
-                                          </button>
+                                    <div key={priv.id} className="space-y-1">
+                                      <div
+                                        className={`w-full rounded-md px-2 py-1 text-[12px] text-white text-center relative ${priv.color === 'violet'
+                                          ? 'bg-purple-500'
+                                          : 'bg-blue-500'
+                                          } break-words`}
+                                      >
+                                        {!isReadOnly && (
+                                          <div className="absolute top-1 right-1 flex gap-1 text-[10px]">
+                                            <button
+                                              type="button"
+                                              className="text-white/80 hover:text-white"
+                                              onClick={() => handleEditPrivatisation(priv)}
+                                              aria-label="Modifier la privatisation"
+                                            >
+                                              ✎
+                                            </button>
+                                            <button
+                                              type="button"
+                                              className="text-white/80 hover:text-white"
+                                              onClick={() => handleDeletePrivatisation(priv.id)}
+                                              aria-label="Supprimer la privatisation"
+                                            >
+                                              🗑
+                                            </button>
+                                          </div>
+                                        )}
+                                        <div className="font-semibold pr-8">{priv.name}</div>
+                                        <div>
+                                          <span className="font-medium">Midi</span>
+                                          {` · ${(priv.start || '--:--')} - ${priv.end || '--:--'
+                                            } · ${priv.people || 0} pers`}
                                         </div>
-                                      )}
-                                      <div className="font-semibold pr-8">{priv.name}</div>
-                                      <div>
-                                        <span className="font-medium">Midi</span>
-                                        {` · ${(priv.start || '--:--')} - ${priv.end || '--:--'
-                                          } · ${priv.people || 0} pers`}
+                                        {hostesses.length > 0 && (
+                                          <div>Hôtesses: {hostesses.join(', ')}</div>
+                                        )}
+                                        {priv.prisePar && (
+                                          <div>Prise par: {priv.prisePar}</div>
+                                        )}
+                                        {priv.commentaire && (
+                                          <div>{priv.commentaire}</div>
+                                        )}
                                       </div>
-                                      {hostesses.length > 0 && (
-                                        <div>Hôtesses: {hostesses.join(', ')}</div>
-                                      )}
-                                      {priv.prisePar && (
-                                        <div>Prise par: {priv.prisePar}</div>
-                                      )}
-                                      {priv.commentaire && (
-                                        <div>{priv.commentaire}</div>
+                                      {(Number(priv.has_documents || 0) > 0 || (typeof priv.message === 'string' && priv.message.trim())) && (
+                                        <div className="flex items-center justify-end gap-1">
+                                          {Number(priv.has_documents || 0) > 0 && (
+                                            <span
+                                              className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-white shadow-sm"
+                                              title="Documents liés"
+                                              aria-label="Documents liés"
+                                            >
+                                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-3 w-3">
+                                                <path d="M7.5 3A1.5 1.5 0 0 0 6 4.5v15A1.5 1.5 0 0 0 7.5 21h9A1.5 1.5 0 0 0 18 19.5V9.621a1.5 1.5 0 0 0-.44-1.06l-4.12-4.12A1.5 1.5 0 0 0 12.379 4H7.5Z"/>
+                                              </svg>
+                                            </span>
+                                          )}
+                                          {typeof priv.message === 'string' && priv.message.trim() && (
+                                            <button
+                                              type="button"
+                                              className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white shadow-sm hover:bg-red-600"
+                                              onClick={() => openPrivMessage(priv)}
+                                              aria-label="Voir le message"
+                                              title="Voir le message"
+                                            >
+                                              !
+                                            </button>
+                                          )}
+                                        </div>
                                       )}
                                     </div>
                                   );
@@ -2289,47 +2485,74 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                                       ? [priv.hostess]
                                       : [];
                                   return (
-                                    <div
-                                      key={priv.id}
-                                      className={`w-full rounded-md px-2 py-1 text-[12px] text-white text-center relative ${priv.color === 'violet'
-                                        ? 'bg-purple-500'
-                                        : 'bg-blue-500'
-                                        } break-words`}
-                                    >
-                                      {!isReadOnly && (
-                                        <div className="absolute top-1 right-1 flex gap-1 text-[10px]">
-                                          <button
-                                            type="button"
-                                            className="text-white/80 hover:text-white"
-                                            onClick={() => handleEditPrivatisation(priv)}
-                                            aria-label="Modifier la privatisation"
-                                          >
-                                            ✎
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="text-white/80 hover:text-white"
-                                            onClick={() => handleDeletePrivatisation(priv.id)}
-                                            aria-label="Supprimer la privatisation"
-                                          >
-                                            🗑
-                                          </button>
+                                    <div key={priv.id} className="space-y-1">
+                                      <div
+                                        className={`w-full rounded-md px-2 py-1 text-[12px] text-white text-center relative ${priv.color === 'violet'
+                                          ? 'bg-purple-500'
+                                          : 'bg-blue-500'
+                                          } break-words`}
+                                      >
+                                        {!isReadOnly && (
+                                          <div className="absolute top-1 right-1 flex gap-1 text-[10px]">
+                                            <button
+                                              type="button"
+                                              className="text-white/80 hover:text-white"
+                                              onClick={() => handleEditPrivatisation(priv)}
+                                              aria-label="Modifier la privatisation"
+                                            >
+                                              ✎
+                                            </button>
+                                            <button
+                                              type="button"
+                                              className="text-white/80 hover:text-white"
+                                              onClick={() => handleDeletePrivatisation(priv.id)}
+                                              aria-label="Supprimer la privatisation"
+                                            >
+                                              🗑
+                                            </button>
+                                          </div>
+                                        )}
+                                        <div className="font-semibold pr-8">{priv.name}</div>
+                                        <div>
+                                          <span className="font-medium">Soir</span>
+                                          {` · ${(priv.start || '--:--')} - ${priv.end || '--:--'
+                                            } · ${priv.people || 0} pers`}
                                         </div>
-                                      )}
-                                      <div className="font-semibold pr-8">{priv.name}</div>
-                                      <div>
-                                        <span className="font-medium">Soir</span>
-                                        {` · ${(priv.start || '--:--')} - ${priv.end || '--:--'
-                                          } · ${priv.people || 0} pers`}
+                                        {hostesses.length > 0 && (
+                                          <div>Hôtesses: {hostesses.join(', ')}</div>
+                                        )}
+                                        {priv.prisePar && (
+                                          <div>Prise par: {priv.prisePar}</div>
+                                        )}
+                                        {priv.commentaire && (
+                                          <div>{priv.commentaire}</div>
+                                        )}
                                       </div>
-                                      {hostesses.length > 0 && (
-                                        <div>Hôtesses: {hostesses.join(', ')}</div>
-                                      )}
-                                      {priv.prisePar && (
-                                        <div>Prise par: {priv.prisePar}</div>
-                                      )}
-                                      {priv.commentaire && (
-                                        <div>{priv.commentaire}</div>
+                                      {(Number(priv.has_documents || 0) > 0 || (typeof priv.message === 'string' && priv.message.trim())) && (
+                                        <div className="flex items-center justify-end gap-1">
+                                          {Number(priv.has_documents || 0) > 0 && (
+                                            <span
+                                              className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-white shadow-sm"
+                                              title="Documents liés"
+                                              aria-label="Documents liés"
+                                            >
+                                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-3 w-3">
+                                                <path d="M7.5 3A1.5 1.5 0 0 0 6 4.5v15A1.5 1.5 0 0 0 7.5 21h9A1.5 1.5 0 0 0 18 19.5V9.621a1.5 1.5 0 0 0-.44-1.06l-4.12-4.12A1.5 1.5 0 0 0 12.379 4H7.5Z"/>
+                                              </svg>
+                                            </span>
+                                          )}
+                                          {typeof priv.message === 'string' && priv.message.trim() && (
+                                            <button
+                                              type="button"
+                                              className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white shadow-sm hover:bg-red-600"
+                                              onClick={() => openPrivMessage(priv)}
+                                              aria-label="Voir le message"
+                                              title="Voir le message"
+                                            >
+                                              !
+                                            </button>
+                                          )}
+                                        </div>
                                       )}
                                     </div>
                                   );
@@ -2376,46 +2599,73 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                                   ? [priv.hostess]
                                   : [];
                               return (
-                                <div
-                                  key={priv.id}
-                                  className={`w-full rounded-md px-3 py-2 text-[13px] text-white text-center relative ${priv.color === 'violet'
-                                    ? 'bg-purple-500'
-                                    : 'bg-blue-500'
-                                    } break-words`}
-                                >
-                                  {!isReadOnly && (
-                                    <div className="absolute top-2 right-2 flex gap-2 text-[11px]">
-                                      <button
-                                        type="button"
-                                        className="text-white/90"
-                                        onClick={() => handleEditPrivatisation(priv)}
-                                      >
-                                        ✎
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="text-white/90"
-                                        onClick={() => handleDeletePrivatisation(priv.id)}
-                                      >
-                                        🗑
-                                      </button>
+                                <div key={priv.id} className="space-y-1">
+                                  <div
+                                    className={`w-full rounded-md px-3 py-2 text-[13px] text-white text-center relative ${priv.color === 'violet'
+                                      ? 'bg-purple-500'
+                                      : 'bg-blue-500'
+                                      } break-words`}
+                                  >
+                                    {!isReadOnly && (
+                                      <div className="absolute top-2 right-2 flex gap-2 text-[11px]">
+                                        <button
+                                          type="button"
+                                          className="text-white/90"
+                                          onClick={() => handleEditPrivatisation(priv)}
+                                        >
+                                          ✎
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="text-white/90"
+                                          onClick={() => handleDeletePrivatisation(priv.id)}
+                                        >
+                                          🗑
+                                        </button>
+                                      </div>
+                                    )}
+                                    <div className="font-semibold pr-10">{priv.name}</div>
+                                    <div>
+                                      {(priv.start || '--:--')}
+                                      {' - '}
+                                      {(priv.end || '--:--')}
+                                      {` · ${priv.people || 0} pers`}
                                     </div>
-                                  )}
-                                  <div className="font-semibold pr-10">{priv.name}</div>
-                                  <div>
-                                    {(priv.start || '--:--')}
-                                    {' - '}
-                                    {(priv.end || '--:--')}
-                                    {` · ${priv.people || 0} pers`}
+                                    {hostesses.length > 0 && (
+                                      <div>Hôtesses: {hostesses.join(', ')}</div>
+                                    )}
+                                    {priv.prisePar && (
+                                      <div>Prise par: {priv.prisePar}</div>
+                                    )}
+                                    {priv.commentaire && (
+                                      <div>{priv.commentaire}</div>
+                                    )}
                                   </div>
-                                  {hostesses.length > 0 && (
-                                    <div>Hôtesses: {hostesses.join(', ')}</div>
-                                  )}
-                                  {priv.prisePar && (
-                                    <div>Prise par: {priv.prisePar}</div>
-                                  )}
-                                  {priv.commentaire && (
-                                    <div>{priv.commentaire}</div>
+                                  {(Number(priv.has_documents || 0) > 0 || (typeof priv.message === 'string' && priv.message.trim())) && (
+                                    <div className="flex items-center justify-end gap-1">
+                                      {Number(priv.has_documents || 0) > 0 && (
+                                        <span
+                                          className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-white shadow-sm"
+                                          title="Documents liés"
+                                          aria-label="Documents liés"
+                                        >
+                                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-3 w-3">
+                                            <path d="M7.5 3A1.5 1.5 0 0 0 6 4.5v15A1.5 1.5 0 0 0 7.5 21h9A1.5 1.5 0 0 0 18 19.5V9.621a1.5 1.5 0 0 0-.44-1.06l-4.12-4.12A1.5 1.5 0 0 0 12.379 4H7.5Z"/>
+                                          </svg>
+                                        </span>
+                                      )}
+                                      {typeof priv.message === 'string' && priv.message.trim() && (
+                                        <button
+                                          type="button"
+                                          className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white shadow-sm hover:bg-red-600"
+                                          onClick={() => openPrivMessage(priv)}
+                                          aria-label="Voir le message"
+                                          title="Voir le message"
+                                        >
+                                          !
+                                        </button>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               );
@@ -2623,16 +2873,6 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   Général
                 </button>
                 <button
-                  onClick={() => setPrivModalActiveTab('infos_client')}
-                  className={`px-4 py-3 font-medium text-sm transition-colors whitespace-nowrap ${
-                    privModalActiveTab === 'infos_client'
-                      ? 'text-[#163667] border-b-2 border-[#163667]'
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                >
-                  Infos client
-                </button>
-                <button
                   onClick={() => setPrivModalActiveTab('documents')}
                   className={`px-4 py-3 font-medium text-sm transition-colors whitespace-nowrap ${
                     privModalActiveTab === 'documents'
@@ -2642,6 +2882,16 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                 >
                   Documents
                 </button>
+                <button
+                  onClick={() => setPrivModalActiveTab('message')}
+                  className={`px-4 py-3 font-medium text-sm transition-colors whitespace-nowrap ${
+                    privModalActiveTab === 'message'
+                      ? 'text-[#163667] border-b-2 border-[#163667]'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Message
+                </button>
               </div>
 
               {/* Contenu des onglets - scrollable */}
@@ -2650,15 +2900,42 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
               {privModalActiveTab === 'general' && (
                 <form id="form-general" onSubmit={handleAddPrivatisation} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div className="relative">
-                    <label className="block text-xs text-gray-700 mb-2 font-medium">🏢 Nom de la privat (auto-complétion entreprises)</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs text-gray-700 font-medium">
+                        Nom de la privat
+                      </label>
+                      <div className="flex items-center gap-0.5 bg-white border border-gray-200 rounded-lg p-0.5 ml-2 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setPrivMode('entreprise')}
+                          className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${privMode === 'entreprise' ? 'shadow-sm' : 'bg-white text-gray-500 hover:text-gray-700'}`}
+                          style={privMode === 'entreprise'
+                            ? { backgroundColor: 'var(--color-primary)', color: 'var(--color-text-on-primary)' }
+                            : { backgroundColor: '#ffffff' }}
+                        >
+                          Entreprise
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPrivMode('prv')}
+                          className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${privMode === 'prv' ? 'shadow-sm' : 'bg-white text-gray-500 hover:text-gray-700'}`}
+                          style={privMode === 'prv'
+                            ? { backgroundColor: 'var(--color-primary)', color: 'var(--color-text-on-primary)' }
+                            : { backgroundColor: '#ffffff' }}
+                        >
+                          PRV
+                        </button>
+                      </div>
+                    </div>
                     <input
                       type="text"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                      placeholder="Saisissez et sélectionnez une entreprise..."
-                      value={privName}
+                      className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#163667] ${privMode === 'prv' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white'}`}
+                      placeholder={privMode === 'prv' ? 'Généré automatiquement depuis Prénom + Nom...' : 'Saisissez et sélectionnez une entreprise...'}
+                      value={privMode === 'prv' ? [clientPrenom, clientNom].filter(Boolean).join(' ') : privName}
+                      disabled={privMode === 'prv'}
                       onChange={(e) => {
+                        if (privMode === 'prv') return;
                         setPrivName(e.target.value);
-                        // Auto-search for enterprises as user types
                         if (e.target.value.length >= 1) {
                           searchEnterprises(e.target.value);
                         } else {
@@ -2666,7 +2943,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                           setEnterpriseSearchResults([]);
                         }
                       }}
-                      onFocus={() => privName.trim().length >= 1 && searchEnterprises(privName)}
+                      onFocus={() => privMode !== 'prv' && privName.trim().length >= 1 && searchEnterprises(privName)}
                     />
                     {/* Dropdown list of enterprises */}
                     {showEnterpriseSearch && enterpriseSearchResults.length > 0 && (
@@ -2832,138 +3109,133 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                       onChange={(e) => setPrivComment(e.target.value)}
                     />
                   </div>
+
+                  {/* Accordéon Infos client */}
+                  <div className="md:col-span-2 border border-gray-200 rounded-lg mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsClientInfoOpen(v => !v)}
+                      className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      <span className="flex items-center gap-2 flex-wrap">
+                        <span>Infos client</span>
+                        {privMode === 'prv' && (
+                          <span className="text-xs text-red-500 font-normal">(Nom, Prénom, Tél. obligatoires en mode PRV)</span>
+                        )}
+                        {(clientNom || clientPrenom) && (
+                          <span className="text-xs text-green-600 font-normal">— {[clientPrenom, clientNom].filter(Boolean).join(' ')}</span>
+                        )}
+                      </span>
+                      <span className="text-gray-400 ml-2">{isClientInfoOpen ? '▲' : '▼'}</span>
+                    </button>
+                    {isClientInfoOpen && (
+                      <div className="border-t border-gray-200 p-4 space-y-3">
+                        <div>
+                          <label className="block text-xs text-gray-700 mb-1 font-medium">CIVILITÉ</label>
+                          <select
+                            value={clientCivilite}
+                            onChange={(e) => setClientCivilite(e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                          >
+                            <option value="Mme">Mme</option>
+                            <option value="M.">M.</option>
+                            <option value="Mlle">Mlle</option>
+                            <option value="Autre">Autre</option>
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-700 mb-1 font-medium">
+                              NOM {privMode === 'prv' && <span className="text-red-500">*</span>}
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Ex: Dupont"
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                              value={clientNom}
+                              onChange={(e) => setClientNom(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-700 mb-1 font-medium">
+                              PRÉNOM {privMode === 'prv' && <span className="text-red-500">*</span>}
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Ex: Marie"
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                              value={clientPrenom}
+                              onChange={(e) => setClientPrenom(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-700 mb-1 font-medium">
+                              TÉLÉPHONE {privMode === 'prv' && <span className="text-red-500">*</span>}
+                            </label>
+                            <input
+                              type="tel"
+                              placeholder="Ex: 06 12 34 56 78"
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                              value={clientTelephone}
+                              onChange={(e) => setClientTelephone(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-700 mb-1 font-medium">EMAIL</label>
+                            <input
+                              type="email"
+                              placeholder="Ex: marie@example.com"
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                              value={clientMail}
+                              onChange={(e) => setClientMail(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-700 mb-1 font-medium">ADRESSE POSTALE</label>
+                          <textarea
+                            placeholder="Ex: 123 rue de la Paix"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                            rows="2"
+                            value={clientAdresse}
+                            onChange={(e) => setClientAdresse(e.target.value)}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-700 mb-1 font-medium">VILLE</label>
+                            <input
+                              type="text"
+                              placeholder="Ex: Paris"
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                              value={clientVille}
+                              onChange={(e) => setClientVille(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-700 mb-1 font-medium">CODE POSTAL</label>
+                            <input
+                              type="text"
+                              placeholder="Ex: 75000"
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                              value={clientCodePostal}
+                              onChange={(e) => setClientCodePostal(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        {privMode === 'prv' && (!clientNom.trim() || !clientPrenom.trim() || !clientTelephone.trim()) && (
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-xs text-red-700">
+                            ⚠️ NOM, PRÉNOM et TÉLÉPHONE sont obligatoires en mode PRV
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </form>
               )}
 
-              {/* Onglet Infos client */}
-              {privModalActiveTab === 'infos_client' && (
-                <div className="space-y-4 mb-6">
-                  <div className="border-b-2 border-gray-200 pb-3">
-                    <p className="text-xs text-gray-600">Remplissez les champs du client (NOM + PRÉNOM + TÉLÉPHONE sont obligatoires)</p>
-                  </div>
-
-                  {/* Civilité */}
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-2 font-medium">CIVILITÉ</label>
-                    <select
-                      value={clientCivilite}
-                      onChange={(e) => setClientCivilite(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                    >
-                      <option value="Mme">Mme</option>
-                      <option value="M.">M.</option>
-                      <option value="Mlle">Mlle</option>
-                      <option value="Autre">Autre</option>
-                    </select>
-                  </div>
-
-                  {/* Row 1: NOM + PRÉNOM (côte à côte) */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-700 mb-2 font-medium">NOM <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Dupont"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                        value={clientNom}
-                        onChange={(e) => {
-                          setClientNom(e.target.value);
-                          // Déclencher la recherche automatiquement
-                          if (e.target.value.length >= 2) {
-                            searchClients(e.target.value);
-                          }
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-700 mb-2 font-medium">PRÉNOM <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Marie"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                        value={clientPrenom}
-                        onChange={(e) => {
-                          setClientPrenom(e.target.value);
-                          if (e.target.value.length >= 2) {
-                            searchClients(e.target.value);
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Row 2: TÉLÉPHONE + EMAIL (côte à côte) */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-700 mb-2 font-medium">TÉLÉPHONE <span className="text-red-500">*</span></label>
-                      <input
-                        type="tel"
-                        placeholder="Ex: 06 12 34 56 78"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                        value={clientTelephone}
-                        onChange={(e) => {
-                          setClientTelephone(e.target.value);
-                          if (e.target.value.length >= 2) {
-                            searchClients(e.target.value);
-                          }
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-700 mb-2 font-medium">EMAIL</label>
-                      <input
-                        type="email"
-                        placeholder="Ex: marie@example.com"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                        value={clientMail}
-                        onChange={(e) => setClientMail(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Row 3: ADRESSE + VILLE + CODE POSTAL */}
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-2 font-medium">ADRESSE POSTALE</label>
-                    <textarea
-                      placeholder="Ex: 123 rue de la Paix"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                      rows="2"
-                      value={clientAdresse}
-                      onChange={(e) => setClientAdresse(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-700 mb-2 font-medium">VILLE</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Paris"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                        value={clientVille}
-                        onChange={(e) => setClientVille(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-700 mb-2 font-medium">CODE POSTAL</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: 75000"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#163667]"
-                        value={clientCodePostal}
-                        onChange={(e) => setClientCodePostal(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Validation message */}
-                  {(!clientNom.trim() || !clientPrenom.trim() || !clientTelephone.trim()) && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
-                      ⚠️ Remplissez au minimum: NOM, PRÉNOM et TÉLÉPHONE pour enregistrer le client
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Onglet Documents */}
               {privModalActiveTab === 'documents' && (
@@ -3004,11 +3276,11 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                     </button>
                   </div>
 
-                  {privDocuments.length > 0 && (
+                  {privDocuments.filter((doc) => !pendingDeletedDocumentIds.includes(doc.id)).length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium text-gray-700">Documents :</h4>
                       <div className="space-y-2">
-                        {privDocuments.map((doc) => (
+                        {privDocuments.filter((doc) => !pendingDeletedDocumentIds.includes(doc.id)).map((doc) => (
                           <div key={doc.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
                             <div className="flex-1">
                               <p className="text-sm font-medium text-gray-700">{doc.file_name}</p>
@@ -3040,6 +3312,82 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                       </div>
                     </div>
                   )}
+
+                  {pendingDeletedDocumentIds.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-gray-700">Documents retirés en attente :</h4>
+                      <p className="text-xs text-gray-500">Ils seront supprimés seulement après clic sur Ajouter ou Modifier.</p>
+                      <div className="space-y-2">
+                        {privDocuments.filter((doc) => pendingDeletedDocumentIds.includes(doc.id)).map((doc) => (
+                          <div key={doc.id} className="flex items-center justify-between bg-red-50 p-3 rounded-lg border border-red-200">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-700">{doc.file_name}</p>
+                              <p className="text-xs text-gray-500">Suppression en attente</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setPendingDeletedDocumentIds(prev => prev.filter((id) => id !== doc.id))}
+                                className="p-2 text-sm text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                title="Restaurer"
+                              >
+                                ↺
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {pendingDocuments.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-gray-700">Documents en attente :</h4>
+                      <p className="text-xs text-gray-500">Ils seront ajoutés automatiquement après clic sur Ajouter ou Modifier.</p>
+                      <div className="space-y-2">
+                        {pendingDocuments.map((doc) => (
+                          <div key={doc.id} className="flex items-center justify-between bg-amber-50 p-3 rounded-lg border border-amber-200">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-700">{doc.file_name}</p>
+                              <p className="text-xs text-gray-500">
+                                {doc.file_size && `${(parseInt(doc.file_size, 10) / 1024).toFixed(1)} KB`} • en attente
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDocument(doc.id)}
+                                className="p-2 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Retirer"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {privModalActiveTab === 'message' && (
+                <div className="space-y-4 mb-6">
+                  <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    Une bulle rouge "!" apparaitra dans le planning pour l'ouvrir rapidement.
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-2 font-medium">Message privatisation</label>
+                    <textarea
+                      className="w-full min-h-[220px] border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white resize-y focus:outline-none focus:ring-1 focus:ring-[#163667]"
+                      placeholder="Ex: Client VIP, entree laterale, verifier la table avant 19h30..."
+                      value={privMessage}
+                      onChange={(e) => setPrivMessage(e.target.value)}
+                    />
+                    <div className="mt-2 text-xs text-gray-500">
+                      Si le champ est vide, aucun message ne sera affiche dans le planning.
+                    </div>
+                  </div>
                 </div>
               )}
               </div>
@@ -3048,7 +3396,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
               <div className="px-6 py-4 border-t border-gray-200 flex-shrink-0 flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsPrivModalOpen(false)}
+                  onClick={handleCancelPrivatisationModal}
                   style={{
                     borderColor: (() => {
                       const palette = COLOR_PALETTES.find(p => p.id === selectedTheme);
@@ -3061,13 +3409,14 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   }}
                   className="px-4 py-2 rounded-lg border-2 font-medium transition-colors hover:opacity-80"
                 >
-                  {privModalActiveTab === 'general' ? 'Annuler' : 'Fermer'}
+                  Annuler
                 </button>
 
-                {privModalActiveTab === 'general' && (
+                {(privModalActiveTab === 'general' || privModalActiveTab === 'message' || privModalActiveTab === 'documents') && (
                   <button
-                    form="form-general"
-                    type="submit"
+                    form={privModalActiveTab === 'general' ? 'form-general' : undefined}
+                    type={privModalActiveTab === 'general' ? 'submit' : 'button'}
+                    onClick={privModalActiveTab !== 'general' ? submitPrivatisation : undefined}
                     style={{
                       backgroundColor: (() => {
                         const palette = COLOR_PALETTES.find(p => p.id === selectedTheme);
@@ -3080,21 +3429,38 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
                   </button>
                 )}
 
-                {privModalActiveTab === 'infos_client' && (
-                  <button
-                    type="button"
-                    onClick={handleSaveClientInfo}
-                    style={{
-                      backgroundColor: (() => {
-                        const palette = COLOR_PALETTES.find(p => p.id === selectedTheme);
-                        return palette?.colors?.primary || '#163667';
-                      })(),
-                    }}
-                    className="text-white text-sm font-semibold py-2 px-5 rounded-lg hover:opacity-90 transition-opacity"
-                  >
-                    Enregistrer
-                  </button>
-                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {viewingPrivMessage && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4"
+            onClick={() => setViewingPrivMessage(null)}
+          >
+            <div
+              className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-red-500">Message privatisation</div>
+                  <h3 className="mt-1 text-base font-semibold text-gray-900">{viewingPrivMessage.title}</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setViewingPrivMessage(null)}
+                  className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                  aria-label="Fermer"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="px-5 py-4">
+                <div className="whitespace-pre-wrap rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm leading-6 text-gray-800">
+                  {viewingPrivMessage.message}
+                </div>
               </div>
             </div>
           </div>
@@ -3104,13 +3470,7 @@ const HotesseTables = ({ onLogout, archivesMode = false }) => {
           <button
             id="fab-add"
             aria-label="Ajouter une privatisation"
-            onClick={() => {
-              setEditingPriv(null);
-              setPrivHostesses([]);
-              prevHostessCountRef.current = 0;
-              setIsPrivModalOpen(true);
-              setIsSettingsOpen(false);
-            }}
+            onClick={openCreatePrivatisationModal}
           >
             +
           </button>

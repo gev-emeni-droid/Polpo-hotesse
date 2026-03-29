@@ -267,7 +267,7 @@ export default function ClientsPage() {
                 onMouseEnter={e => { e.currentTarget.style.backgroundColor = themeColor; e.currentTarget.style.color = 'white'; }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = themeColor; }}
               >
-                ✏️ Modifier
+                Modifier
               </button>
             ) : (
               <div className="flex gap-2">
@@ -536,7 +536,7 @@ export default function ClientsPage() {
                         style={{ backgroundColor: `${themeColor}20`, color: themeColor }}
                         className="px-3 py-1 rounded-full text-xs font-semibold"
                       >
-                        {client.type === 'entreprise' ? '🏢 Entreprise' : '👤 Client'}
+                        {client.type === 'entreprise' ? 'Entreprise' : 'Client'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">

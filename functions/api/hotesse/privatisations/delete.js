@@ -67,10 +67,12 @@ export const onRequest = async ({ env, request }) => {
     
     console.log('Deleting privatisation with ID:', id);
     
-    // IMPORTANT: Supprimer d'abord les références (hostesses), PUIS la privatisation
+    // IMPORTANT: Supprimer d'abord les références, PUIS la privatisation
     // Sinon on aura une erreur de clé étrangère
     const result2 = await env.DB.prepare('DELETE FROM hotesse_privatisations_hostesses WHERE priv_id = ?').bind(id).run();
     console.log('Delete from hotesse_privatisations_hostesses result:', result2);
+    const resultMessage = await env.DB.prepare('DELETE FROM hotesse_privatisations_messages WHERE priv_id = ?').bind(id).run();
+    console.log('Delete from hotesse_privatisations_messages result:', resultMessage);
     
     const result1 = await env.DB.prepare('DELETE FROM hotesse_privatisations WHERE id = ?').bind(id).run();
     console.log('Delete from hotesse_privatisations result:', result1);

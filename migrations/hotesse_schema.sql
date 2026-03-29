@@ -42,6 +42,14 @@ CREATE TABLE IF NOT EXISTS hotesse_privatisations_hostesses (
   FOREIGN KEY (priv_id) REFERENCES hotesse_privatisations(id)
 );
 
+CREATE TABLE IF NOT EXISTS hotesse_privatisations_messages (
+  priv_id TEXT PRIMARY KEY,
+  message TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (priv_id) REFERENCES hotesse_privatisations(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS hotesse_settings (
   id TEXT PRIMARY KEY,
   notif_contacts_json TEXT,

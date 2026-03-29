@@ -36,6 +36,13 @@ CREATE TABLE hotesse_privatisations_hostesses (
       PRIMARY KEY (priv_id, hostess_name),
       FOREIGN KEY (priv_id) REFERENCES hotesse_privatisations(id)
     );
+CREATE TABLE hotesse_privatisations_messages (
+  priv_id TEXT PRIMARY KEY,
+  message TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (priv_id) REFERENCES hotesse_privatisations(id) ON DELETE CASCADE
+    );
 CREATE TABLE hotesse_notif_contacts (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,

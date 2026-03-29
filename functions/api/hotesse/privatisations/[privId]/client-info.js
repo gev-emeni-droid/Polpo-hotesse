@@ -10,11 +10,21 @@ const ensureSchema = async (db) => {
       adresse_postale TEXT,
       ville TEXT,
       code_postal TEXT,
+      priv_mode TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (priv_id) REFERENCES hotesse_privatisations(id) ON DELETE CASCADE
     );
   `).run();
+
+  // Backward-compatible migration for existing databases.
+  try {
+    await db.prepare('ALTER TABLE hotesse_privatisations_client_info ADD COLUMN priv_mode TEXT').run();
+  } catch (err) {
+    if (!String(err?.message || '').toLowerCase().includes('duplicate column name')) {
+      throw err;
+    }
+  }
 };
 
 export async function onRequest(context) {
@@ -64,11 +74,13 @@ export async function onRequest(context) {
     const logs = [];
     try {
       const body = await request.json();
-      const { civilite, nom, prenom, mail, telephone, adresse_postale, ville, code_postal } = body;
+      const { civilite, nom, prenom, mail, telephone, adresse_postale, ville, code_postal, priv_mode } = body;
+      const normalizedPrivMode = priv_mode === 'prv' ? 'prv' : 'entreprise';
       const now = new Date().toISOString();
 
       logs.push(`>>> POST /client-info - Body received: ${JSON.stringify(body)}`);
       logs.push(`>>> Extracted values - nom: ${JSON.stringify(nom)}, prenom: ${JSON.stringify(prenom)}, telephone: ${JSON.stringify(telephone)}`);
+      logs.push(`>>> normalizedPrivMode: ${normalizedPrivMode}`);
 
       // Check if exists
       const existing = await db.prepare(
@@ -83,17 +95,17 @@ export async function onRequest(context) {
         logs.push('>>> Updating existing client_info');
         await db.prepare(
           `UPDATE hotesse_privatisations_client_info 
-           SET civilite = ?, nom = ?, prenom = ?, mail = ?, telephone = ?, adresse_postale = ?, ville = ?, code_postal = ?, updated_at = ?
+           SET civilite = ?, nom = ?, prenom = ?, mail = ?, telephone = ?, adresse_postale = ?, ville = ?, code_postal = ?, priv_mode = ?, updated_at = ?
            WHERE priv_id = ?`
-        ).bind(civilite || 'Mme', nom, prenom, mail, telephone, adresse_postale, ville, code_postal, now, privId).run();
+        ).bind(civilite || 'Mme', nom, prenom, mail, telephone, adresse_postale, ville, code_postal, normalizedPrivMode, now, privId).run();
       } else {
         // Insert
         logs.push('>>> Inserting new client_info');
         await db.prepare(
           `INSERT INTO hotesse_privatisations_client_info 
-           (priv_id, civilite, nom, prenom, mail, telephone, adresse_postale, ville, code_postal, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(privId, civilite || 'Mme', nom, prenom, mail, telephone, adresse_postale, ville, code_postal, now, now).run();
+           (priv_id, civilite, nom, prenom, mail, telephone, adresse_postale, ville, code_postal, priv_mode, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(privId, civilite || 'Mme', nom, prenom, mail, telephone, adresse_postale, ville, code_postal, normalizedPrivMode, now, now).run();
       }
 
       // Automatically create or update clients in hotesse_clients table
@@ -103,8 +115,11 @@ export async function onRequest(context) {
           `SELECT name FROM hotesse_privatisations WHERE id = ?`
         ).bind(privId).first();
         const privName = privData?.name;
+        const entrepriseValue = normalizedPrivMode === 'prv' ? null : (privName || null);
+        const contactType = normalizedPrivMode === 'prv' ? 'client' : 'entreprise';
 
         logs.push(`>>> privName: ${privName}, nom: ${nom}, prenom: ${prenom}, telephone: ${telephone}`);
+        logs.push(`>>> contactType selected from priv_mode: ${contactType}`);
 
         // 1. Create or UPDATE client (type = "client") with personal info
         try {
@@ -115,18 +130,36 @@ export async function onRequest(context) {
           if (prenom && telephone) {
             logs.push('>>> Query: Search by prenom + nom + telephone');
             existingClient = await db.prepare(
-              `SELECT id FROM hotesse_clients WHERE prenom = ? AND nom = ? AND telephone = ? AND type = 'client'`
-            ).bind(prenom, nom, telephone).first();
+              `SELECT id FROM hotesse_clients WHERE prenom = ? AND nom = ? AND telephone = ? AND type = ?`
+            ).bind(prenom, nom, telephone, contactType).first();
           } else if (prenom) {
             logs.push('>>> Query: Search by prenom + nom');
             existingClient = await db.prepare(
-              `SELECT id FROM hotesse_clients WHERE prenom = ? AND nom = ? AND type = 'client'`
-            ).bind(prenom, nom).first();
+              `SELECT id FROM hotesse_clients WHERE prenom = ? AND nom = ? AND type = ?`
+            ).bind(prenom, nom, contactType).first();
           } else {
             logs.push('>>> Query: Search by nom only (no prenom)');
             existingClient = await db.prepare(
-              `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'client' AND prenom IS NULL`
-            ).bind(nom).first();
+              `SELECT id FROM hotesse_clients WHERE nom = ? AND type = ? AND prenom IS NULL`
+            ).bind(nom, contactType).first();
+          }
+
+          // Migration douce: en mode entreprise, réutiliser un ancien contact typé 'client' si présent
+          if (!existingClient && contactType === 'entreprise') {
+            if (prenom && telephone) {
+              existingClient = await db.prepare(
+                `SELECT id FROM hotesse_clients WHERE prenom = ? AND nom = ? AND telephone = ? AND type = 'client'`
+              ).bind(prenom, nom, telephone).first();
+            } else if (prenom) {
+              existingClient = await db.prepare(
+                `SELECT id FROM hotesse_clients WHERE prenom = ? AND nom = ? AND type = 'client'`
+              ).bind(prenom, nom).first();
+            } else {
+              existingClient = await db.prepare(
+                `SELECT id FROM hotesse_clients WHERE nom = ? AND type = 'client' AND prenom IS NULL`
+              ).bind(nom).first();
+            }
+            if (existingClient) logs.push(`>>> Migrating existing client to entreprise type: ${existingClient.id}`);
           }
 
           if (existingClient) {
@@ -134,31 +167,31 @@ export async function onRequest(context) {
             logs.push(`>>> Found existing client, updating: ${existingClient.id}`);
             await db.prepare(
               `UPDATE hotesse_clients 
-               SET civilite = ?, telephone = ?, mail = ?, adresse_postale = ?, ville = ?, code_postal = ?, entreprise = ?, updated_at = ?
+               SET civilite = ?, telephone = ?, mail = ?, adresse_postale = ?, ville = ?, code_postal = ?, entreprise = ?, type = ?, updated_at = ?
                WHERE id = ?`
-            ).bind(civilite || 'Mme', telephone || null, mail || null, adresse_postale || null, ville || null, code_postal || null, privName || null, now, existingClient.id).run();
+            ).bind(civilite || 'Mme', telephone || null, mail || null, adresse_postale || null, ville || null, code_postal || null, entrepriseValue, contactType, now, existingClient.id).run();
             logs.push(`>>> Updated client: ${existingClient.id}`);
           } else {
             // Create new client
             const clientId = `client_${crypto.randomUUID()}`;
-            logs.push(`>>> No existing client found, creating new one: ${clientId}`);
-            logs.push(`>>> INSERT VALUES: ${JSON.stringify({ clientId, prenom: prenom || null, nom, telephone: telephone || null, mail: mail || null, adresse_postale: adresse_postale || null, entreprise: privName || null, type: 'client' })}`);
+            logs.push(`>>> No existing contact found, creating new one: ${clientId}`);
+            logs.push(`>>> INSERT VALUES: ${JSON.stringify({ clientId, prenom: prenom || null, nom, telephone: telephone || null, mail: mail || null, adresse_postale: adresse_postale || null, entreprise: entrepriseValue, type: contactType })}`);
             
             const insertResult = await db.prepare(
               `INSERT INTO hotesse_clients 
                (id, civilite, prenom, nom, telephone, mail, adresse_postale, ville, code_postal, entreprise, type, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'client', ?, ?)`
-            ).bind(clientId, civilite || 'Mme', prenom || null, nom, telephone || null, mail || null, adresse_postale || null, ville || null, code_postal || null, privName || null, now, now).run();
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).bind(clientId, civilite || 'Mme', prenom || null, nom, telephone || null, mail || null, adresse_postale || null, ville || null, code_postal || null, entrepriseValue, contactType, now, now).run();
             
             logs.push(`>>> INSERT result: ${JSON.stringify(insertResult)}`);
-            logs.push(`>>> Created client (type=client): ${clientId}`);
+            logs.push(`>>> Created contact (type=${contactType}): ${clientId}`);
           }
         } catch (err) {
           logs.push(`>>> ERROR creating/updating client: ${err.message}`);
         }
 
         // 2. Create or UPDATE entreprise client from privatisation name
-        if (privName) {
+        if (privName && normalizedPrivMode !== 'prv') {
           try {
             logs.push(`>>> Checking for existing entreprise: ${privName}`);
             // Case-insensitive lookup to avoid duplicates

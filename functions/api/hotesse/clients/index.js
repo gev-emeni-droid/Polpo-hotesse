@@ -44,9 +44,9 @@ async function handleGet(db, searchParams) {
     let bindParams = [];
 
     if (searchTerm) {
-      // Search in nom or prenom (case-insensitive)
-      whereConditions.push(`(LOWER(nom) LIKE ? OR LOWER(prenom) LIKE ?)`);
-      bindParams.push(`%${searchTerm}%`, `%${searchTerm}%`);
+      // Search across all relevant fields (case-insensitive)
+      whereConditions.push(`(LOWER(nom) LIKE ? OR LOWER(prenom) LIKE ? OR LOWER(telephone) LIKE ? OR LOWER(COALESCE(mail,'')) LIKE ? OR LOWER(COALESCE(entreprise,'')) LIKE ?)`);
+      bindParams.push(`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`);
     }
 
     if (typeFilter && (typeFilter === 'client' || typeFilter === 'entreprise')) {

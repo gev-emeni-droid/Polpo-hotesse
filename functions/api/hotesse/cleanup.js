@@ -36,10 +36,17 @@ export const onRequestPost = async ({ env, request }) => {
       WHERE priv_id NOT IN (SELECT id FROM hotesse_privatisations)
     `).run();
 
-    // Step 5: Drop old unused tables if requested
+    // Step 5: Cleanup orphaned messages
+    console.log('🧹 Step 5: Removing orphaned messages...');
+    await env.DB.prepare(`
+      DELETE FROM hotesse_privatisations_messages
+      WHERE priv_id NOT IN (SELECT id FROM hotesse_privatisations)
+    `).run();
+
+    // Step 6: Drop old unused tables if requested
     let droppedTables = [];
     if (action === 'full') {
-      console.log('🧹 Step 5: Removing legacy tables...');
+      console.log('🧹 Step 6: Removing legacy tables...');
       
       const oldTables = ['tables', 'table_params', 'rows', 'settings'];
       for (const table of oldTables) {
@@ -52,7 +59,7 @@ export const onRequestPost = async ({ env, request }) => {
       }
     }
 
-    // Step 6: Get cleanup statistics
+    // Step 7: Get cleanup statistics
     console.log('📊 Getting cleanup statistics...');
     const stats = {
       calendars: (await env.DB.prepare('SELECT COUNT(*) as count FROM hotesse_calendars').first()).count,
@@ -61,6 +68,7 @@ export const onRequestPost = async ({ env, request }) => {
       prise_par_options: (await env.DB.prepare('SELECT COUNT(*) as count FROM hotesse_prise_par_options').first()).count,
       notif_contacts: (await env.DB.prepare('SELECT COUNT(*) as count FROM hotesse_notif_contacts').first()).count,
       hostess_assignments: (await env.DB.prepare('SELECT COUNT(*) as count FROM hotesse_privatisations_hostesses').first()).count,
+      priv_messages: (await env.DB.prepare('SELECT COUNT(*) as count FROM hotesse_privatisations_messages').first()).count,
     };
 
     return new Response(JSON.stringify({

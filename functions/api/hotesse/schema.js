@@ -156,6 +156,16 @@ export const ensureHotesseSchema = async (db) => {
   `).run();
 
   await db.prepare(`
+    CREATE TABLE IF NOT EXISTS hotesse_privatisations_messages (
+      priv_id TEXT PRIMARY KEY,
+      message TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (priv_id) REFERENCES hotesse_privatisations(id) ON DELETE CASCADE
+    );
+  `).run();
+
+  await db.prepare(`
     CREATE TABLE IF NOT EXISTS hotesse_clients (
       id TEXT PRIMARY KEY,
       civilite TEXT DEFAULT 'Mme',
